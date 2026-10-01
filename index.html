@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relevo · App</title>
+<!-- ================================================================
+     RELEVO — Red Deporte Solidario
+     MÓDULO 4: PUBLICAR NECESIDAD — construido sobre M1, M2 y M3.
+     Reutiliza tokens, componentes y contrato de datos sin cambiarlos.
+     Nuevo en M4: asistente en 4 pasos (qué se necesita → para quiénes →
+     legitimidad → revisar y enviar), barra de progreso, autoguardado en
+     sesión, validaciones (título 6–120, cantidades > 0, bloqueo de nombres
+     de menores, aviso de perecible), vista previa y creación de un caso en
+     estado 'en_revision'.
+       1) TOKENS  2) COMPONENTES  3) DATOS  4) VISTAS (muro, ficha, publicar)  5) PERSISTENCIA
+     ================================================================ -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&display=swap');
+
+/* ============ 1) TOKENS ============ */
+:root{
+  --pino:#1F6E5A; --pino-700:#175646; --pino-100:#DDEAE4;
+  --maravilla:#E0894A; --maravilla-600:#C6712E;
+  --azul:#3B7CA6; --azul-100:#E2ECF3; --violeta:#7C6FD0;
+  --tinta:#1B2A24; --papel:#F5F7F4; --musgo:#5C6B62; --musgo-2:#6E7A71;
+  --linea:#E3E8E3; --linea-soft:#EDF1ED; --superficie:#FFFFFF; --superficie-2:#F0F3EF;
+  --st-review:#9A6412;   --st-review-bg:#F6ECD6;
+  --st-live:#2F6D93;     --st-live-bg:#E4EEF5;
+  --st-contact:#5E52A8;  --st-contact-bg:#EAE7F6;
+  --st-partial:#B5701F;  --st-partial-bg:#F7E9D3;
+  --st-done:#1F6E5A;     --st-done-bg:#DCEBE4;
+  --peligro:#A9412F;     --peligro-bg:#F6E2DD;
+  --topbar-bg:rgba(245,247,244,.86); --sk-a:#EEF2EE; --sk-b:#E2E8E2;
+  --aviso-bg:#1B2A24; --aviso-fg:#F5F7F4; --on-pino:#FFFFFF;
+  --radio:14px; --radio-sm:9px;
+  --sombra:0 1px 2px rgba(27,42,36,.05), 0 12px 30px -18px rgba(27,42,36,.28);
+}
+html[data-tema="oscuro"]{
+  --pino:#3FA485; --pino-700:#5FBBA0; --pino-100:#1E3A30;
+  --maravilla:#E8A055; --maravilla-600:#D98A3C;
+  --azul:#5FA0CC; --azul-100:#152C3B; --violeta:#9488D9;
+  --tinta:#E7EEE9; --papel:#12211C; --musgo:#97A79D; --musgo-2:#71857A;
+  --linea:#2A3E35; --linea-soft:#223129; --superficie:#1A2C25; --superficie-2:#21362E;
+  --st-review:#E4B36A;   --st-review-bg:#33290F;
+  --st-live:#6FB0DD;     --st-live-bg:#14293A;
+  --st-contact:#A99CE6;  --st-contact-bg:#221E39;
+  --st-partial:#E3A45E;  --st-partial-bg:#33260F;
+  --st-done:#55C29B;     --st-done-bg:#123027;
+  --peligro:#E88C7E;     --peligro-bg:#331B17;
+  --topbar-bg:rgba(18,33,28,.82); --sk-a:#21362E; --sk-b:#2A3E35;
+  --aviso-bg:#050D0A; --aviso-fg:#E7EEE9; --on-pino:#08160F;
+  --sombra:0 1px 2px rgba(0,0,0,.4), 0 16px 36px -18px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--papel);color:var(--tinta);transition:background-color .25s ease,color .25s ease;font-family:'Public Sans',system-ui,sans-serif;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+@media (max-width:420px){body{font-size:16px}}
+h1,h2,h3,h4{font-family:'Archivo';letter-spacing:-.02em;line-height:1.1;margin:0}
+p{margin:0 0 12px}
+a{color:var(--pino)}
+.mono{font-family:'Space Mono'}
+:focus-visible{outline:3px solid var(--maravilla);outline-offset:2px;border-radius:6px}
+
+/* ============ SHELL ============ */
+.topbar{position:sticky;top:0;z-index:30;background:var(--topbar-bg);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--linea)}
+.topbar-in{max-width:1120px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.marca{display:flex;align-items:center;gap:9px;font-family:'Archivo';font-weight:800;font-size:18px;color:var(--tinta);text-decoration:none}
+.marca .glifo{width:28px;height:28px;flex:none}
+.marca small{font-family:'Space Mono';font-weight:400;font-size:10px;letter-spacing:.06em;color:var(--musgo-2);text-transform:uppercase}
+.marca .glifo .g1{fill:var(--pino)}.marca .glifo .g2{stroke:var(--papel)}.marca .glifo .g3{stroke:var(--maravilla)}.marca .glifo .g4{fill:var(--papel)}
+.tema-toggle{background:transparent;border:1px solid var(--linea);color:var(--tinta);width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;flex:none;margin-left:4px}
+.tema-toggle:hover{background:var(--linea-soft)}
+nav.principal{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav.principal button{font-family:'Public Sans';font-weight:600;font-size:14.5px;color:var(--musgo);background:transparent;border:0;padding:9px 13px;border-radius:9px;cursor:pointer;min-height:40px}
+nav.principal button:hover{background:var(--linea-soft);color:var(--tinta)}
+nav.principal button[aria-current="page"]{background:var(--pino);color:var(--on-pino)}
+
+main{max-width:1120px;margin:0 auto;padding:26px 18px 60px}
+.vista{display:none}
+.vista.visible{display:block;animation:aparece .18s ease}
+@keyframes aparece{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.vista.visible{animation:none}}
+
+.encabezado-vista{margin-bottom:20px}
+.encabezado-vista .kicker{font-family:'Space Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--maravilla-600);margin-bottom:8px;display:flex;align-items:center;gap:9px}
+.encabezado-vista .kicker::before{content:"";width:24px;height:2px;background:var(--maravilla)}
+.encabezado-vista h1{font-size:clamp(28px,5vw,40px);font-weight:800}
+.encabezado-vista p.intro{color:var(--musgo);max-width:64ch;margin-top:10px}
+
+.barra-datos{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio-sm);padding:10px 14px;margin-bottom:22px}
+.barra-datos .conteo{font-family:'Space Mono';font-size:12.5px;color:var(--musgo)}
+.barra-datos .conteo b{color:var(--tinta)}
+.barra-datos .acciones{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* ============ 2) COMPONENTES ============ */
+.btn{font-family:'Public Sans';font-weight:700;font-size:15px;border-radius:10px;padding:10px 18px;border:2px solid transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;text-decoration:none;line-height:1}
+.btn-sm{padding:7px 13px;font-size:13.5px;min-height:36px}
+.btn-block{width:100%}
+.btn-primario{background:var(--maravilla);color:#3a2405;border-color:var(--maravilla)}
+.btn-primario:hover{background:var(--maravilla-600);border-color:var(--maravilla-600);color:#fff}
+.btn-secundario{background:transparent;color:var(--pino);border-color:var(--pino)}
+.btn-secundario:hover{background:var(--pino-100)}
+.btn-fantasma{background:transparent;color:var(--musgo);border-color:var(--linea)}
+.btn-fantasma:hover{background:var(--linea-soft);color:var(--tinta)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.badge{font-family:'Space Mono';font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:.02em;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.review{color:var(--st-review);background:var(--st-review-bg)}
+.badge.live{color:var(--st-live);background:var(--st-live-bg)}
+.badge.contact{color:var(--st-contact);background:var(--st-contact-bg)}
+.badge.partial{color:var(--st-partial);background:var(--st-partial-bg)}
+.badge.done{color:var(--st-done);background:var(--st-done-bg)}
+.badge.rechazado{color:var(--peligro);background:var(--peligro-bg)}
+
+.chip-verif{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--azul);color:var(--azul);background:var(--azul-100)}
+.chip-verif svg{width:13px;height:13px}
+.chip-noverif{font-size:12.5px;color:var(--musgo-2);font-weight:600}
+
+.tarjeta-caso{background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);overflow:hidden;box-shadow:var(--sombra);display:flex;flex-direction:column;cursor:pointer;text-align:left;transition:transform .12s ease, box-shadow .12s ease}
+.tarjeta-caso.no-interactiva{cursor:default}
+.tarjeta-caso:not(.no-interactiva):hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(18,33,28,.06),0 16px 34px -20px rgba(18,33,28,.4)}
+@media (prefers-reduced-motion:reduce){.tarjeta-caso,.tarjeta-caso:hover{transform:none;transition:none}}
+.tc-imagen{height:104px;background:linear-gradient(135deg,var(--pino),var(--azul));position:relative;display:flex;align-items:flex-end;padding:11px;gap:6px}
+.tc-disciplina{font-family:'Space Mono';font-size:11px;color:#fff;background:rgba(0,0,0,.28);padding:4px 9px;border-radius:6px}
+.tc-perecible{font-family:'Space Mono';font-size:10px;color:#3a2405;background:var(--maravilla);padding:4px 8px;border-radius:6px;margin-left:auto;font-weight:700}
+.tc-cuerpo{padding:15px;display:flex;flex-direction:column;gap:8px;flex:1}
+.tc-titulo{font-size:17px;font-weight:700;font-family:'Archivo'}
+.tc-org{font-size:13px;color:var(--musgo);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tc-meta{font-size:13px;color:var(--musgo)}
+.tc-pie{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:6px}
+.tc-ver{font-family:'Space Mono';font-size:12px;color:var(--pino);font-weight:700}
+
+.vacio{text-align:center;padding:38px 20px;border:1px dashed var(--linea);border-radius:var(--radio);background:var(--superficie);color:var(--musgo)}
+.vacio .icono{font-size:30px;margin-bottom:8px}
+.vacio h4{font-size:17px;color:var(--tinta);margin-bottom:6px}
+
+.skeleton{background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);overflow:hidden}
+.sk-linea{height:104px;background:linear-gradient(90deg,var(--sk-a) 25%,var(--sk-b) 37%,var(--sk-a) 63%);background-size:400% 100%;animation:brillo 1.4s ease infinite}
+.sk-cuerpo{padding:15px;display:flex;flex-direction:column;gap:10px}
+.sk-barra{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--sk-a) 25%,var(--sk-b) 37%,var(--sk-a) 63%);background-size:400% 100%;animation:brillo 1.4s ease infinite}
+@keyframes brillo{0%{background-position:100% 50%}100%{background-position:0 50%}}
+@media (prefers-reduced-motion:reduce){.sk-linea,.sk-barra{animation:none}}
+
+.rejilla{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+
+/* ============ M2: FILTROS Y MURO ============ */
+.filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);padding:15px;box-shadow:var(--sombra);margin-bottom:14px}
+.filtro{display:flex;flex-direction:column;gap:5px;min-width:0}
+.filtro.buscar{grid-column:1 / -1}
+.filtro label{font-family:'Space Mono';font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--musgo-2)}
+.filtro select,.filtro input{font-family:'Public Sans';font-size:15px;padding:10px 12px;border:1.5px solid var(--linea);border-radius:9px;background:var(--superficie-2);color:var(--tinta);min-height:44px;width:100%}
+.filtro select:hover,.filtro input:hover{border-color:var(--musgo-2)}
+.resultados-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.resultados-cab .cuenta{font-family:'Space Mono';font-size:13px;color:var(--musgo)}
+.resultados-cab .cuenta b{color:var(--tinta)}
+.resultados-cab .ordenar{display:flex;align-items:center;gap:8px}
+.resultados-cab .ordenar label{font-family:'Space Mono';font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--musgo-2)}
+.resultados-cab select{font-family:'Public Sans';font-size:14px;padding:8px 10px;border:1.5px solid var(--linea);border-radius:8px;background:var(--superficie-2);min-height:40px}
+.chips-activos{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.chip-filtro{font-family:'Space Mono';font-size:12px;background:var(--pino-100);color:var(--pino-700);border:1px solid var(--pino);border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;min-height:32px}
+.chip-filtro .x{font-weight:700}
+.chip-filtro:hover{background:var(--pino);color:#fff}
+
+/* ============ M3: FICHA ============ */
+.btn-volver{background:transparent;border:0;color:var(--pino);font-family:'Public Sans';font-weight:700;font-size:14.5px;cursor:pointer;padding:6px 0;display:inline-flex;align-items:center;gap:6px;margin-bottom:12px}
+.btn-volver:hover{color:var(--pino-700)}
+.ficha-cab{background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);padding:20px;box-shadow:var(--sombra);margin-bottom:16px;border-top:5px solid var(--pino)}
+.ficha-cab .disc-chip{font-family:'Space Mono';font-size:12px;color:#fff;background:var(--pino);padding:4px 10px;border-radius:6px;display:inline-flex;gap:6px;align-items:center}
+.ficha-cab h1{font-size:clamp(23px,4vw,31px);font-weight:800;margin:12px 0 8px}
+.ficha-cab .sub{color:var(--musgo);font-size:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ficha-cab .sub .sep{color:var(--linea)}
+.ficha-grid{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start}
+@media (max-width:760px){.ficha-grid{grid-template-columns:1fr}}
+.panel{background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);padding:18px;box-shadow:var(--sombra);margin-bottom:16px}
+.panel h3{font-size:15px;color:var(--pino-700);margin-bottom:12px;font-family:'Archivo';font-weight:700}
+.items{list-style:none;margin:0;padding:0}
+.items li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--linea-soft)}
+.items li:first-child{border-top:0}
+.items .q{font-family:'Space Mono';font-weight:700;color:var(--pino-700)}
+.nota-perecible{margin-top:10px;font-size:13px;background:var(--st-partial-bg);color:var(--maravilla-600);border-radius:var(--radio-sm);padding:8px 11px;font-weight:600}
+.dato{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--linea-soft);font-size:14px}
+.dato:first-child{border-top:0}
+.dato .k{color:var(--musgo)}
+.dato .v{font-weight:600;text-align:right}
+.timeline{margin:2px 0 0}
+.tl{position:relative;padding:0 0 14px 22px;border-left:2px solid var(--linea);margin-left:6px}
+.tl:last-child{border-left-color:transparent;padding-bottom:0}
+.tl::before{content:"";position:absolute;left:-7px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--pino);border:2px solid var(--superficie)}
+.tl .f{font-family:'Space Mono';font-size:11px;color:var(--musgo-2)}
+.tl .a{font-size:14px}
+.tl .a b{font-weight:700}
+.evi{border:1px solid var(--linea);border-radius:var(--radio-sm);padding:12px 14px;background:var(--superficie-2);font-size:14px;color:var(--musgo);display:flex;gap:10px;align-items:flex-start}
+.evi .ic{font-size:18px}
+.aside-conf{position:sticky;top:70px}
+.nota-mediado{font-size:12.5px;color:var(--musgo-2);margin-top:12px;line-height:1.45}
+.proteccion{font-size:12.5px;color:var(--musgo-2);margin-top:8px;display:flex;gap:7px;align-items:flex-start}
+
+/* ============ M4: FORMULARIO / WIZARD ============ */
+.wizard{max-width:640px}
+.progreso{display:flex;gap:6px;margin:0 0 8px}
+.progreso .seg{height:6px;border-radius:3px;background:var(--linea);flex:1;transition:background .2s}
+.progreso .seg.on{background:var(--pino)}
+.paso-titulo{font-family:'Space Mono';font-size:12px;letter-spacing:.03em;color:var(--musgo-2);margin-bottom:18px}
+.paso{display:none}
+.paso.activo{display:block;animation:aparece .18s ease}
+@media (prefers-reduced-motion:reduce){.paso.activo{animation:none}}
+.fld{margin:0 0 16px}
+.fld > label{display:block;font-weight:600;font-size:14.5px;margin-bottom:5px}
+.fld .req{color:var(--peligro)}
+.fld input,.fld select,.fld textarea{width:100%;font-family:'Public Sans';font-size:15px;padding:11px 13px;border:1.5px solid var(--linea);border-radius:9px;background:var(--superficie-2);color:var(--tinta);min-height:44px}
+.fld textarea{min-height:100px;resize:vertical;line-height:1.5}
+.fld .hint{font-size:12.5px;color:var(--musgo-2);margin-top:4px}
+.fld.error input,.fld.error select,.fld.error textarea{border-color:var(--peligro);background:var(--peligro-bg)}
+.fld .msg{font-size:12.5px;color:var(--peligro);margin-top:5px;display:none}
+.fld.error .msg{display:block}
+.fld-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.fld-2{grid-template-columns:1fr}}
+.item-row{display:grid;grid-template-columns:1fr 96px 44px;gap:8px;margin-bottom:8px;align-items:center}
+.item-row input{min-height:44px}
+.btn-quitar{border:1.5px solid var(--linea);background:var(--superficie-2);border-radius:9px;cursor:pointer;height:44px;color:var(--peligro);font-size:16px}
+.btn-quitar:hover{background:var(--peligro-bg);border-color:var(--peligro)}
+.check{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;border:1.5px solid var(--linea);border-radius:9px;cursor:pointer;margin-bottom:10px}
+.check:hover{border-color:var(--musgo-2)}
+.check input{width:20px;height:20px;margin-top:2px;flex:none;min-height:auto}
+.check .tx{font-size:14.5px;font-weight:600}
+.check .tx small{display:block;color:var(--musgo-2);font-size:12.5px;margin-top:2px;font-weight:400}
+.aviso-perecible{display:none;margin-top:8px;font-size:13px;background:var(--st-partial-bg);color:var(--maravilla-600);border-radius:9px;padding:9px 12px;font-weight:600}
+.aviso-perecible.ver{display:block}
+.wizard-nav{display:flex;justify-content:space-between;gap:12px;margin-top:22px}
+.autosave{font-family:'Space Mono';font-size:11px;color:var(--musgo-2);margin-top:12px;display:flex;align-items:center;gap:6px}
+.autosave::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pino)}
+.nota-envio{margin-top:16px;background:var(--st-review-bg);color:var(--st-review);border-radius:9px;padding:11px 13px;font-size:13.5px;font-weight:600}
+.exito{text-align:center;padding:38px 22px;border:1px solid var(--linea);border-radius:var(--radio);background:var(--superficie);box-shadow:var(--sombra);max-width:520px;margin:0 auto}
+.exito .ic{font-size:44px}
+.exito h2{font-size:24px;margin:12px 0 6px;font-weight:800}
+.exito p{color:var(--musgo);max-width:42ch;margin:0 auto}
+.exito .acc{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+
+/* ============ M5: MODERACIÓN ============ */
+.nav-badge{font-family:'Space Mono';font-size:10px;font-weight:700;background:var(--maravilla);color:#3a2405;border-radius:999px;padding:1px 6px;margin-left:2px;display:inline-flex;align-items:center;min-width:16px;justify-content:center}
+.mod-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--linea)}
+.mod-tab{font-family:'Public Sans';font-weight:600;font-size:14px;color:var(--musgo);background:transparent;border:0;border-bottom:2px solid transparent;padding:9px 12px;cursor:pointer;min-height:40px;display:inline-flex;align-items:center;gap:7px;margin-bottom:-1px}
+.mod-tab:hover{color:var(--tinta)}
+.mod-tab.activo{color:var(--pino);border-bottom-color:var(--pino)}
+.mod-tab-num{font-family:'Space Mono';font-size:11px;background:var(--superficie-2);color:var(--musgo);border-radius:999px;padding:1px 8px;min-width:22px;text-align:center}
+.mod-tab.activo .mod-tab-num{background:var(--pino-100);color:var(--pino-700)}
+.cola{display:grid;gap:12px}
+.mod-item{background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);padding:16px 18px;box-shadow:var(--sombra)}
+.mod-item-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.mod-item-top .disc-chip{font-family:'Space Mono';font-size:11px;color:#fff;background:var(--pino);padding:3px 9px;border-radius:6px}
+.mod-item-tit{font-size:17px;font-weight:700;font-family:'Archivo'}
+.mod-item-meta{font-size:13px;color:var(--musgo);margin-top:5px}
+.mod-item-acc{margin-top:12px}
+.rub-count{font-family:'Space Mono';font-size:12px;color:var(--musgo);margin-top:10px}
+.btn-peligro{background:transparent;color:var(--peligro);border-color:var(--peligro)}
+.btn-peligro:hover{background:var(--peligro-bg)}
+.mod-nota{width:100%}
+
+/* ============ M6: CONTACTO MEDIADO ============ */
+.chip-ofrece{margin-top:10px;font-family:'Space Mono';font-size:12px;font-weight:700;color:var(--pino-700);background:var(--pino-100);border-radius:999px;padding:5px 11px;display:inline-flex;align-items:center;gap:7px}
+.chip-ofrece::before{content:"\1F91D"}
+.modal-fondo{position:fixed;inset:0;background:rgba(23,36,31,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:60;animation:modalFade .18s ease}
+.modal-fondo[hidden]{display:none}
+@keyframes modalFade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.modal-fondo{animation:none}}
+.modal{background:var(--superficie);border:1px solid var(--linea);border-radius:16px;box-shadow:0 20px 60px -20px rgba(0,0,0,.5);max-width:520px;width:100%;max-height:90vh;overflow:auto;position:relative;padding:26px 24px}
+.modal-x{position:absolute;top:12px;right:12px;background:transparent;border:0;font-size:16px;color:var(--musgo);cursor:pointer;width:36px;height:36px;border-radius:8px;line-height:1}
+.modal-x:hover{background:var(--linea-soft);color:var(--tinta)}
+.modal-eyebrow{font-family:'Space Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--maravilla-600);margin-bottom:6px}
+.modal h2{font-size:22px;font-weight:800;padding-right:28px}
+.modal-sub{color:var(--musgo);font-size:14.5px;margin:4px 0 18px}
+.radio-grupo{margin-bottom:16px}
+.radio-tit{font-weight:600;font-size:14.5px;margin-bottom:8px}
+.radio-card{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1.5px solid var(--linea);border-radius:9px;cursor:pointer;margin-bottom:8px}
+.radio-card:hover{border-color:var(--musgo-2)}
+.radio-card input{width:18px;height:18px;flex:none;accent-color:var(--pino)}
+.radio-card:has(input:checked){border-color:var(--pino);background:var(--pino-100)}
+.radio-tx{font-size:14.5px;font-weight:600}
+.ct-items{margin:0 0 16px;padding:12px 14px;border:1px dashed var(--linea);border-radius:9px}
+.ct-item-row{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:6px 0}
+.ct-item-desc{font-size:14px}
+.ct-qty{width:82px;text-align:center;font-family:'Public Sans';font-size:15px;padding:8px;border:1.5px solid var(--linea);border-radius:8px;background:var(--superficie-2);color:var(--tinta);min-height:40px}
+.ct-priv-tit{font-weight:700;font-size:15px;margin:6px 0 10px}
+.priv-nota{font-size:12.5px;color:var(--musgo);background:var(--azul-100);border-radius:9px;padding:10px 12px;margin:2px 0 16px}
+.modal-acc{margin-top:20px}
+.modal-exito{text-align:center;padding:12px 4px}
+.modal-exito .ic{font-size:42px}
+.modal-exito h2{font-size:21px;margin:8px 0 6px;padding:0}
+.modal-exito p{color:var(--musgo);font-size:14.5px}
+.ofrecimiento{border:1px solid var(--linea);border-radius:9px;padding:12px 14px;margin-bottom:10px;background:var(--superficie-2)}
+.ofr-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.ofr-tipo{font-family:'Space Mono';font-size:10.5px;font-weight:700;color:var(--pino-700);background:var(--pino-100);border-radius:999px;padding:3px 9px}
+.ofr-fecha{font-family:'Space Mono';font-size:11px;color:var(--musgo-2)}
+.ofr-quien{font-weight:600;font-size:14px}
+.ofr-medio{font-family:'Space Mono';font-size:12.5px;color:var(--azul);margin-top:2px}
+.ofr-items{font-size:13px;color:var(--musgo);margin-top:4px}
+.ofr-msg{font-size:13.5px;color:var(--tinta);margin-top:6px;font-style:italic}
+.ofr-nota{font-size:12px;color:var(--musgo-2);margin-top:8px}
+
+/* ============ M7: REPORTES · M8: CONEXIÓN ============ */
+.cierre-hint{font-size:13.5px;color:var(--musgo);margin-bottom:12px}
+.ns-card{background:linear-gradient(135deg,var(--pino),var(--pino-700));color:#fff;border-radius:var(--radio);padding:26px 24px;box-shadow:var(--sombra);margin-bottom:16px}
+.ns-num{font-family:'Archivo';font-weight:800;font-size:54px;line-height:1}
+.ns-lab{font-size:16px;font-weight:600;margin-top:4px}
+.ns-sub{font-family:'Space Mono';font-size:12.5px;opacity:.88;margin-top:8px}
+.rep-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.rep-tile{background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);padding:16px 18px;box-shadow:var(--sombra)}
+.rt-num{font-family:'Archivo';font-weight:800;font-size:30px;color:var(--pino)}
+.rt-lab{font-size:13px;color:var(--musgo);margin-top:2px}
+.barra-row{display:grid;grid-template-columns:150px 1fr 34px;gap:12px;align-items:center;padding:6px 0}
+.barra-lab{font-size:13.5px;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barra-track{height:12px;background:var(--linea-soft);border-radius:999px;overflow:hidden}
+.barra-fill{height:100%;background:var(--azul);border-radius:999px;min-width:3px;transition:width .4s ease}
+.barra-fill.resalta{background:var(--pino)}
+.barra-val{font-family:'Space Mono';font-size:13px;color:var(--musgo);text-align:right}
+.con-estado{font-family:'Space Mono';font-size:11px;color:var(--musgo-2);align-self:center}
+.con-estado.on{color:var(--pino);font-weight:700}
+@media(prefers-reduced-motion:reduce){.barra-fill{transition:none}}
+@media(max-width:520px){.barra-row{grid-template-columns:110px 1fr 30px}}
+
+/* ============ style guide ============ */
+.bloque{background:var(--superficie);border:1px solid var(--linea);border-radius:var(--radio);padding:20px;margin:16px 0;box-shadow:var(--sombra)}
+.bloque > .etq{font-family:'Space Mono';font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--musgo-2);margin-bottom:14px}
+.fila{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.sw{border:1px solid var(--linea-soft);border-radius:10px;overflow:hidden}
+.sw .c{height:50px}.sw .t{padding:7px 9px;font-size:11.5px;line-height:1.3}
+.sw .t .n{font-weight:700}.sw .t .h{font-family:'Space Mono';font-size:10.5px;color:var(--musgo)}
+
+.aviso{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--aviso-bg);color:var(--aviso-fg);padding:12px 18px;border-radius:10px;font-size:14px;box-shadow:var(--sombra);opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:90vw}
+.aviso.ver{opacity:1;transform:translateX(-50%) translateY(0)}
+.aviso.error{background:var(--peligro)}
+footer.pie{max-width:1120px;margin:0 auto;padding:22px 18px 40px;color:var(--musgo-2);font-size:12.5px;font-family:'Space Mono'}
+</style>
+</head>
+<body>
+
+<!-- ================= SHELL ================= -->
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="marca" href="#" onclick="return false">
+      <svg class="glifo" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect class="g1" x="1" y="1" width="30" height="30" rx="8"/><line class="g2" x1="16" y1="4" x2="16" y2="28" stroke-width="1.4" opacity=".6"/><circle class="g3" cx="16" cy="16" r="6" fill="none" stroke-width="2"/><circle class="g4" cx="16" cy="16" r="1.8"/></svg>
+      <span>Relevo <small>Deporte Solidario</small></span>
+    </a>
+    <nav class="principal" aria-label="Navegación principal">
+      <button data-vista="explorar" aria-current="page">Explorar</button>
+      <button data-vista="ficha">Ficha</button>
+      <button data-vista="publicar">Publicar</button>
+      <button data-vista="moderar">Moderar <span class="nav-badge" id="badgeModerar" style="display:none"></span></button>
+      <button data-vista="reportes">Reportes</button>
+      <button data-vista="sistema">Sistema de diseño</button>
+    </nav>
+    <button class="tema-toggle" id="btnTema" type="button" aria-label="Cambiar apariencia" title="Cambiar apariencia (claro / oscuro)">🌙</button>
+  </div>
+</header>
+
+<main>
+  <div class="barra-datos">
+    <span class="conteo" id="conteo">—</span>
+    <div class="acciones">
+      <button class="btn btn-fantasma btn-sm" id="btnExportar" type="button">Exportar JSON</button>
+      <button class="btn btn-fantasma btn-sm" id="btnImportar" type="button">Importar JSON</button>
+      <button class="btn btn-fantasma btn-sm" id="btnReset" type="button">Restaurar ejemplo</button>
+      <button class="btn btn-fantasma btn-sm" id="btnConectar" type="button">Conectar API</button>
+      <span class="con-estado" id="conEstado"></span>
+      <input type="file" id="inputImportar" accept="application/json,.json" hidden>
+    </div>
+  </div>
+
+  <!-- ===== VISTA: EXPLORAR (M2) ===== -->
+  <section class="vista visible" id="vista-explorar" aria-label="Explorar necesidades">
+    <div class="encabezado-vista">
+      <div class="kicker">Módulo 2 · Muro</div>
+      <h1>Explorar necesidades</h1>
+      <p class="intro">Necesidades publicadas y verificadas. Filtra por disciplina, comuna o estado, o busca por texto. Toca una tarjeta para ver el caso completo.</p>
+    </div>
+    <div class="filtros" role="search">
+      <div class="filtro buscar"><label for="fBuscar">Buscar</label><input type="search" id="fBuscar" placeholder="Ej: zapatillas, vóleibol, Tongoy, colaciones…" autocomplete="off"></div>
+      <div class="filtro"><label for="fDisciplina">Disciplina</label><select id="fDisciplina"></select></div>
+      <div class="filtro"><label for="fComuna">Comuna</label><select id="fComuna"></select></div>
+      <div class="filtro"><label for="fEstado">Estado</label><select id="fEstado"></select></div>
+    </div>
+    <div class="resultados-cab">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="cuenta" id="muroConteo" aria-live="polite" role="status">—</span>
+        <button class="btn btn-fantasma btn-sm" id="btnLimpiar" type="button">Limpiar filtros</button>
+      </div>
+      <div class="ordenar">
+        <label for="fOrden">Ordenar</label>
+        <select id="fOrden"><option value="recientes">Más recientes</option><option value="expira">Próximos a expirar</option></select>
+      </div>
+    </div>
+    <div class="chips-activos" id="chipsActivos" style="display:none"></div>
+    <div class="rejilla" id="muroResultados"></div>
+  </section>
+
+  <!-- ===== VISTA: FICHA (M3) ===== -->
+  <section class="vista" id="vista-ficha" aria-label="Ficha del caso">
+    <div id="fichaContenido"></div>
+  </section>
+
+  <!-- ===== VISTA: PUBLICAR (M4) ===== -->
+  <section class="vista" id="vista-publicar" aria-label="Publicar necesidad">
+    <div class="encabezado-vista">
+      <div class="kicker">Módulo 4 · Publicar</div>
+      <h1>Publicar una necesidad</h1>
+      <p class="intro">Cuéntanos qué necesita tu club o escuela. Es rápido y guiado. Sin nombres ni rostros de menores: la información de los niños se describe en general.</p>
+    </div>
+
+    <div class="wizard" id="pubForm">
+      <div class="progreso" id="pProgreso" aria-hidden="true">
+        <span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span>
+      </div>
+      <div class="paso-titulo" id="pPasoTitulo" role="status" aria-live="polite">Paso 1 de 4</div>
+
+      <!-- PASO 1 -->
+      <div class="paso activo" data-paso="1">
+        <div class="fld"><label for="pTitulo">Título del caso <span class="req">*</span></label>
+          <input type="text" id="pTitulo" maxlength="120" placeholder="Ej: 12 balones de vóleibol talla 5">
+          <div class="hint">Claro y concreto: qué y cuánto. Entre 6 y 120 caracteres.</div>
+          <div class="msg" id="msgTitulo">Escribe un título de 6 a 120 caracteres.</div></div>
+        <div class="fld"><label for="pDisciplina">Disciplina <span class="req">*</span></label>
+          <select id="pDisciplina"></select><div class="msg" id="msgDisciplina">Elige una disciplina.</div></div>
+        <div class="fld"><label for="pCategoria">Tipo de necesidad <span class="req">*</span></label>
+          <select id="pCategoria"></select>
+          <div class="aviso-perecible" id="pPerecible">Es perecible: coordina fecha y punto de entrega puntual con quien aporte.</div>
+          <div class="msg" id="msgCategoria">Elige el tipo de necesidad.</div></div>
+        <div class="fld" id="fldItems"><label>Implementos y cantidades <span class="req">*</span></label>
+          <div id="pItems"></div>
+          <button class="btn btn-fantasma btn-sm" id="pAgregarItem" type="button">+ Agregar ítem</button>
+          <div class="msg" id="msgItems">Agrega al menos un ítem con cantidad mayor a 0.</div></div>
+      </div>
+
+      <!-- PASO 2 -->
+      <div class="paso" data-paso="2">
+        <div class="fld"><label for="pBeneficiarios">¿A cuántos niños y niñas beneficia? <span class="req">*</span></label>
+          <input type="number" id="pBeneficiarios" min="1" inputmode="numeric" placeholder="Ej: 15">
+          <div class="msg" id="msgBeneficiarios">Indica un número mayor a 0.</div></div>
+        <div class="fld"><label>Rango de edad (años) <span class="req">*</span></label>
+          <div class="fld-2">
+            <input type="number" id="pEdadMin" min="0" max="18" placeholder="Edad mínima" aria-label="Edad mínima">
+            <input type="number" id="pEdadMax" min="0" max="18" placeholder="Edad máxima" aria-label="Edad máxima">
+          </div>
+          <div class="msg" id="msgEdad">Ingresa un rango válido (0 a 18, mínimo ≤ máximo).</div></div>
+        <div class="fld-2">
+          <div class="fld"><label for="pComuna">Comuna <span class="req">*</span></label>
+            <input type="text" id="pComuna" placeholder="Ej: Tongoy"><div class="msg" id="msgComuna">Indica la comuna.</div></div>
+          <div class="fld"><label for="pRegion">Región</label><input type="text" id="pRegion" value="Coquimbo"></div>
+        </div>
+        <div class="fld"><label for="pContexto">Contexto de la necesidad <span class="req">*</span></label>
+          <textarea id="pContexto" placeholder="Describe la situación SIN nombrar a menores. Ej: 'El club comparte 3 balones entre 18 jugadoras que se turnan para entrenar…'"></textarea>
+          <div class="hint">Sin nombres ni rostros de menores. Describe en general: edad, cantidad y para qué.</div>
+          <div class="msg" id="msgContexto">Escribe al menos 20 caracteres, sin nombres de menores.</div></div>
+      </div>
+
+      <!-- PASO 3 -->
+      <div class="paso" data-paso="3">
+        <div class="fld"><label for="pOrg">Organización que publica <span class="req">*</span></label>
+          <select id="pOrg"></select><div class="msg" id="msgOrg">Elige o crea una organización.</div></div>
+        <div id="pOrgNueva" style="display:none">
+          <div class="fld"><label for="pOrgNombre">Nombre de la organización <span class="req">*</span></label>
+            <input type="text" id="pOrgNombre" placeholder="Ej: Club Deportivo Bellavista"><div class="msg" id="msgOrgNombre">Indica el nombre.</div></div>
+          <div class="fld"><label for="pOrgTipo">Tipo</label>
+            <select id="pOrgTipo"><option value="club">Club</option><option value="academia">Academia</option><option value="escuela">Escuela</option><option value="taller">Taller</option></select></div>
+        </div>
+        <div class="fld"><label for="pRol">Tu relación con el grupo <span class="req">*</span></label>
+          <select id="pRol">
+            <option value="">Selecciona…</option><option value="entrenador">Entrenador/a</option><option value="monitor">Monitor/a</option>
+            <option value="profesor">Profesor/a</option><option value="dirigente">Dirigente</option>
+            <option value="apoderado">Apoderado/a</option><option value="coordinador">Coordinador/a</option>
+          </select><div class="msg" id="msgRol">Indica tu relación con el grupo.</div></div>
+        <div class="fld"><label for="pAnioInicio">¿Desde qué año funciona?</label>
+          <input type="number" id="pAnioInicio" min="1900" max="2026" placeholder="Ej: 2016"><div class="msg" id="msgAnio">Ingresa un año válido.</div></div>
+        <label class="check"><input type="checkbox" id="pFederado"><span class="tx">Está federado o inscrito<small>En una federación, liga o registro municipal.</small></span></label>
+        <label class="check"><input type="checkbox" id="pRespaldo"><span class="tx">Tengo respaldo del caso<small>Foto de entrenamiento, carta o redes sociales del club. Ayuda a la verificación.</small></span></label>
+      </div>
+
+      <!-- PASO 4 -->
+      <div class="paso" data-paso="4"><div id="pRevision"></div></div>
+
+      <div class="wizard-nav">
+        <button class="btn btn-fantasma" id="pAnterior" type="button">← Anterior</button>
+        <button class="btn btn-primario" id="pSiguiente" type="button">Siguiente →</button>
+      </div>
+      <div class="autosave">Borrador guardado automáticamente en esta sesión</div>
+    </div>
+
+    <div id="pubExito" style="display:none"></div>
+  </section>
+
+  <!-- ===== VISTA: MODERAR (M5) ===== -->
+  <section class="vista" id="vista-moderar" aria-label="Moderar necesidades"></section>
+
+  <!-- ===== VISTA: REPORTES (M7) ===== -->
+  <section class="vista" id="vista-reportes" aria-label="Reportes"></section>
+
+  <!-- ===== VISTA: SISTEMA DE DISEÑO ===== -->
+  <section class="vista" id="vista-sistema" aria-label="Sistema de diseño">
+    <div class="encabezado-vista"><div class="kicker">Referencia · Módulo 1</div><h1>Sistema de diseño</h1>
+      <p class="intro">Los tokens y componentes base que el muro, la ficha y el formulario reutilizan.</p></div>
+    <div class="bloque">
+      <div class="etq">Colores de marca</div><div class="swatches" id="swMarca"></div>
+      <div class="etq" style="margin-top:20px">Estados del caso</div><div class="fila" id="badgesEstado"></div>
+    </div>
+    <div class="bloque"><div class="etq">Tarjeta de caso (desde datos de ejemplo)</div><div style="max-width:320px" id="demoTarjeta"></div></div>
+  </section>
+</main>
+
+<footer class="pie">Relevo · Red Deporte Solidario — App completa · apariencia clara / oscura · prototipo de un solo archivo</footer>
+<div class="modal-fondo" id="modalContacto" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTit">
+    <button class="modal-x" id="modalCerrar" type="button" aria-label="Cerrar">✕</button>
+    <div id="modalContenido"></div>
+  </div>
+</div>
+<div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ============ 3) DATOS — modelo + semilla (contrato M1) ============ */
+  const DISCIPLINES = [
+    {id:'futbol', name:'Fútbol', icon:'⚽'},{id:'basquetbol', name:'Básquetbol', icon:'🏀'},
+    {id:'voleibol', name:'Vóleibol', icon:'🏐'},{id:'atletismo', name:'Atletismo', icon:'🏃'},
+    {id:'natacion', name:'Natación', icon:'🏊'},{id:'ciclismo', name:'Ciclismo', icon:'🚴'},
+    {id:'tenis_mesa', name:'Tenis de mesa', icon:'🏓'},{id:'artes_marciales', name:'Artes marciales', icon:'🥋'},
+    {id:'gimnasia', name:'Gimnasia', icon:'🤸'}
+  ];
+  const CATEGORIES = [
+    {id:'indumentaria', name:'Indumentaria', perishable:false},{id:'calzado', name:'Calzado', perishable:false},
+    {id:'balones', name:'Balones', perishable:false},{id:'equipamiento_colectivo', name:'Equipamiento colectivo', perishable:false},
+    {id:'proteccion', name:'Protección', perishable:false},{id:'colaciones_deportivas', name:'Colaciones deportivas', perishable:true}
+  ];
+  const SEMILLA_ORGANIZACIONES = [
+    {id:'org_tongoy', name:'Escuela Formativa Tongoy', type:'escuela', disciplines:['futbol','atletismo'], comuna:'Tongoy', region:'Coquimbo', verificationStatus:'verificada', foundedYear:2016, socialLinks:['instagram.com/ef.tongoy']},
+    {id:'org_guanaqueros', name:'Club Deportivo Guanaqueros', type:'club', disciplines:['voleibol'], comuna:'Guanaqueros', region:'Coquimbo', verificationStatus:'verificada', foundedYear:2011, socialLinks:[]},
+    {id:'org_ovalle', name:'Academia Ovalle Básquet', type:'academia', disciplines:['basquetbol'], comuna:'Ovalle', region:'Coquimbo', verificationStatus:'en_revision', foundedYear:2019, socialLinks:[]},
+    {id:'org_serena', name:'Taller de Natación La Serena', type:'taller', disciplines:['natacion'], comuna:'La Serena', region:'Coquimbo', verificationStatus:'por_verificar', foundedYear:2022, socialLinks:[]},
+    {id:'org_coquimbo', name:'Club Ciclismo Coquimbo', type:'club', disciplines:['ciclismo'], comuna:'Coquimbo', region:'Coquimbo', verificationStatus:'verificada', foundedYear:2008, socialLinks:[]}
+  ];
+  const SEMILLA_CASOS = [
+    {id:'case_1', title:'15 pares de zapatillas de fútbol talla 32–36', disciplineId:'futbol', categoryId:'calzado', items:[{desc:'Zapatillas de fútbol',qty:15}], beneficiariesCount:15, ageRange:'8–12', comuna:'Tongoy', region:'Coquimbo', context:'La escuela formativa entrena en tierra y varios niños practican sin calzado adecuado. El calzado permitiría entrenar con seguridad y sumar a más participantes del sector.', status:'publicado', orgId:'org_tongoy', authorRole:'entrenador', legitimacySignals:{federado:false, antiguedadAnios:8, respaldo:true}, perishable:false, evidence:[], createdAt:'2026-07-10', publishedAt:'2026-07-12', expiresAt:'2026-09-12', log:[{fecha:'2026-07-12', accion:'aprobar', por:'moderación'}]},
+    {id:'case_2', title:'12 balones de vóleibol talla 5', disciplineId:'voleibol', categoryId:'balones', items:[{desc:'Balones de vóleibol talla 5',qty:12}], beneficiariesCount:18, ageRange:'10–14', comuna:'Guanaqueros', region:'Coquimbo', context:'El club comparte 3 balones entre 18 jugadoras; se turnan para entrenar el saque y la recepción.', status:'publicado', orgId:'org_guanaqueros', authorRole:'dirigente', legitimacySignals:{federado:true, antiguedadAnios:13, respaldo:true}, perishable:false, evidence:[], createdAt:'2026-07-14', publishedAt:'2026-07-15', expiresAt:'2026-09-15', log:[{fecha:'2026-07-15', accion:'aprobar', por:'moderación'}]},
+    {id:'case_3', title:'Agua e hidratación para jornada de atletismo', disciplineId:'atletismo', categoryId:'colaciones_deportivas', items:[{desc:'Bidones de agua 5L',qty:8},{desc:'Fruta para colación',qty:20}], beneficiariesCount:20, ageRange:'9–13', comuna:'Tongoy', region:'Coquimbo', context:'Jornada de fondo bajo sol; se requiere hidratación y colación saludable para la delegación durante la competencia.', status:'publicado', orgId:'org_tongoy', authorRole:'monitor', legitimacySignals:{federado:false, antiguedadAnios:8, respaldo:true}, perishable:true, evidence:[], createdAt:'2026-07-18', publishedAt:'2026-07-19', expiresAt:'2026-08-05', log:[{fecha:'2026-07-19', accion:'aprobar', por:'moderación'}]},
+    {id:'case_4', title:'10 pelotas de básquetbol N°5', disciplineId:'basquetbol', categoryId:'balones', items:[{desc:'Pelotas de básquetbol N°5',qty:10}], beneficiariesCount:14, ageRange:'8–11', comuna:'Ovalle', region:'Coquimbo', context:'Categoría infantil recién formada, sin balones propios.', status:'en_revision', orgId:'org_ovalle', authorRole:'entrenador', legitimacySignals:{federado:false, antiguedadAnios:1, respaldo:false}, perishable:false, evidence:[], createdAt:'2026-07-24', publishedAt:null, expiresAt:null, log:[]},
+    {id:'case_5', title:'Antiparras y gorros de natación', disciplineId:'natacion', categoryId:'indumentaria', items:[{desc:'Antiparras',qty:16},{desc:'Gorros de silicona',qty:16}], beneficiariesCount:16, ageRange:'7–12', comuna:'La Serena', region:'Coquimbo', context:'Taller comunitario en piscina municipal; falta equipamiento personal básico.', status:'correcciones', orgId:'org_serena', authorRole:'apoderado', legitimacySignals:{federado:false, antiguedadAnios:2, respaldo:false}, perishable:false, evidence:[], createdAt:'2026-07-20', publishedAt:null, expiresAt:null, log:[{fecha:'2026-07-22', accion:'pedir_correccion', por:'moderación', nota:'Agregar respaldo del taller.'}]},
+    {id:'case_6', title:'Uniformes de ciclismo infantil', disciplineId:'ciclismo', categoryId:'indumentaria', items:[{desc:'Poleras técnicas',qty:10},{desc:'Guantes',qty:10}], beneficiariesCount:10, ageRange:'10–14', comuna:'Coquimbo', region:'Coquimbo', context:'Grupo infantil sale a ruta sin indumentaria de seguridad ni identificación del club.', status:'en_contacto', orgId:'org_coquimbo', authorRole:'dirigente', legitimacySignals:{federado:true, antiguedadAnios:18, respaldo:true}, perishable:false, evidence:[], createdAt:'2026-07-05', publishedAt:'2026-07-06', expiresAt:'2026-09-06', log:[{fecha:'2026-07-06', accion:'aprobar', por:'moderación'},{fecha:'2026-07-21', accion:'contacto', por:'colaborador'}]},
+    {id:'case_7', title:'Conos y petos para entrenamiento', disciplineId:'futbol', categoryId:'equipamiento_colectivo', items:[{desc:'Conos de entrenamiento',qty:40},{desc:'Petos',qty:22}], beneficiariesCount:22, ageRange:'8–12', comuna:'Tongoy', region:'Coquimbo', context:'Se recibieron los conos; aún faltan petos para dividir equipos en la práctica.', status:'apoyado_parcial', orgId:'org_tongoy', authorRole:'entrenador', legitimacySignals:{federado:false, antiguedadAnios:8, respaldo:true}, perishable:false, evidence:[], createdAt:'2026-06-28', publishedAt:'2026-06-29', expiresAt:'2026-08-29', log:[{fecha:'2026-06-29', accion:'aprobar', por:'moderación'},{fecha:'2026-07-16', accion:'apoyo_parcial', por:'visibilizador'}]},
+    {id:'case_8', title:'Colaciones saludables para torneo de vóleibol', disciplineId:'voleibol', categoryId:'colaciones_deportivas', items:[{desc:'Cajas de fruta',qty:6},{desc:'Botellas de agua 1.5L',qty:24}], beneficiariesCount:24, ageRange:'10–14', comuna:'Guanaqueros', region:'Coquimbo', context:'Torneo de un día; se cubrió la hidratación y colación de toda la delegación.', status:'resuelto', orgId:'org_guanaqueros', authorRole:'dirigente', legitimacySignals:{federado:true, antiguedadAnios:13, respaldo:true}, perishable:true, evidence:[{tipo:'evidencia_cierre', descripcion:'Foto de la entrega de colaciones el día del torneo (sin menores identificables).'}], createdAt:'2026-06-15', publishedAt:'2026-06-16', expiresAt:'2026-07-16', log:[{fecha:'2026-06-16', accion:'aprobar', por:'moderación'},{fecha:'2026-06-30', accion:'resuelto', por:'visibilizador'}]}
+  ];
+
+  const SEMILLA_OFERTAS = [
+    {id:'off_seed1', caseId:'case_6', tipo:'total', items:[], mensaje:'Puedo comprar las 10 poleras técnicas esta semana.', contacto:{nombre:'Marcela Rojas', medio:'correo', valor:'marcela.rojas@example.cl'}, actorTipo:'persona', createdAt:'2026-07-21'},
+    {id:'off_seed2', caseId:'case_7', tipo:'parcial', items:[{desc:'Petos',qty:12}], mensaje:'Tengo 12 petos nuevos para donar.', contacto:{nombre:'Deportes del Valle', medio:'telefono', valor:'+56 9 5555 1234'}, actorTipo:'organizacion', createdAt:'2026-07-16'}
+  ];
+  const estado = { organizations:[], cases:[], offers:[] };
+  function cargarSemilla(){
+    estado.organizations = JSON.parse(JSON.stringify(SEMILLA_ORGANIZACIONES));
+    estado.cases = JSON.parse(JSON.stringify(SEMILLA_CASOS));
+    estado.offers = JSON.parse(JSON.stringify(SEMILLA_OFERTAS));
+  }
+
+  /* ============ UTILIDADES ============ */
+  function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function el(tag, clase, texto){ const n=document.createElement(tag); if(clase) n.className=clase; if(texto!=null) n.textContent=texto; return n; }
+  function byId(id){ return document.getElementById(id); }
+  function normalizar(s){ return String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  function obtenerDisciplina(id){ return DISCIPLINES.find(d=>d.id===id) || {name:'—',icon:'•'}; }
+  function obtenerCategoria(id){ return CATEGORIES.find(c=>c.id===id) || {name:'—',perishable:false}; }
+  function obtenerOrg(id){ return estado.organizations.find(o=>o.id===id) || {name:'Organización', verificationStatus:'por_verificar', type:'—', comuna:'—', foundedYear:null}; }
+  function formatearFecha(iso){
+    if(!iso) return '—';
+    const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const p=String(iso).split('-'); if(p.length<3) return iso;
+    return parseInt(p[2],10)+' '+meses[parseInt(p[1],10)-1]+' '+p[0];
+  }
+
+  const ESTADOS = {
+    en_revision:{label:'En revisión', cls:'review'}, correcciones:{label:'Correcciones', cls:'review'},
+    rechazado:{label:'Rechazado', cls:'rechazado'}, publicado:{label:'Publicado', cls:'live'},
+    en_contacto:{label:'En contacto', cls:'contact'}, apoyado_parcial:{label:'Apoyado parcial', cls:'partial'},
+    resuelto:{label:'Resuelto', cls:'done'}
+  };
+  const PUBLICOS = ['publicado','en_contacto','apoyado_parcial','resuelto'];
+  const VERIF_LABEL = { verificada:'Verificada', en_revision:'En revisión', por_verificar:'Por verificar', rechazada:'Rechazada', suspendida:'Suspendida' };
+  const ACCION_LABEL = { crear:'Caso creado', aprobar:'Aprobado por moderación', pedir_correccion:'Correcciones solicitadas', contacto:'Un colaborador hizo contacto', apoyo_parcial:'Apoyo parcial recibido', resuelto:'Caso resuelto', rechazar:'Caso rechazado', reabrir:'Devuelto a revisión' };
+
+  // Detector heurístico de nombres de menores (protección de la niñez).
+  function nombreMenorDetectado(texto){
+    if(!texto) return null;
+    const NOMBRES = ['juan','maria','jose','martin','martina','sofia','benjamin','antonia','matias','agustin','florencia','vicente','isidora','tomas','emilia','maximiliano','catalina','diego','fernanda','joaquin','valentina','cristobal','javiera','ignacio','amanda','gabriel','antonella','lucas','emma','pedro','pablo','carla','camila','felipe','francisca','sebastian','constanza','nicolas','trinidad','miguel','rosa'];
+    const disparador = /\b(ni[nñ]o|ni[nñ]a|hijo|hija|alumn[oa]|peque[nñ][oa]|menor|llamad[oa]|se llama)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{2,})/;
+    const m = texto.match(disparador);
+    if(m) return m[2];
+    const palabras = String(texto).split(/\s+/);
+    for(const p of palabras){
+      const limpia = p.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g,'');
+      if(limpia.length>2 && limpia[0]!==limpia[0].toLowerCase() && NOMBRES.includes(normalizar(limpia))) return limpia;
+    }
+    return null;
+  }
+
+  /* ============ 2) COMPONENTES ============ */
+  function chipVerificado(texto){
+    const chip = el('span','chip-verif');
+    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+    chip.appendChild(document.createTextNode(texto || 'Organización verificada'));
+    return chip;
+  }
+  function badgeEstado(status){
+    const info = ESTADOS[status] || {label:status, cls:'review'};
+    return el('span','badge '+info.cls, info.label);
+  }
+  // crearTarjetaCaso(caso, interactiva=true, orgResuelta?)
+  function crearTarjetaCaso(caso, interactiva, orgResuelta){
+    if(interactiva===undefined) interactiva = true;
+    const org = orgResuelta || obtenerOrg(caso.orgId);
+    const disc = obtenerDisciplina(caso.disciplineId);
+    const card = el('article','tarjeta-caso' + (interactiva ? '' : ' no-interactiva'));
+
+    const img = el('div','tc-imagen');
+    img.appendChild(el('span','tc-disciplina', disc.icon + ' ' + disc.name));
+    if(caso.perishable) img.appendChild(el('span','tc-perecible','Perecible'));
+    card.appendChild(img);
+
+    const cuerpo = el('div','tc-cuerpo');
+    cuerpo.appendChild(el('h3','tc-titulo', caso.title || 'Sin título'));
+
+    const quien = el('div','tc-org');
+    quien.appendChild(document.createTextNode((org.name||'Organización') + ' · '));
+    quien.appendChild(org.verificationStatus === 'verificada' ? chipVerificado('Verificada') : el('span','chip-noverif','Sin verificar'));
+    cuerpo.appendChild(quien);
+
+    cuerpo.appendChild(el('div','tc-meta','Para ' + (caso.beneficiariesCount||0) + ' niñas y niños de ' + (caso.ageRange||'—') + ' años · ' + (caso.comuna||'—') + ', ' + (caso.region||'—')));
+
+    const pie = el('div','tc-pie');
+    pie.appendChild(badgeEstado(caso.status));
+    if(interactiva) pie.appendChild(el('span','tc-ver','Ver caso →'));
+    cuerpo.appendChild(pie);
+    card.appendChild(cuerpo);
+
+    if(interactiva){
+      card.setAttribute('role','button');
+      card.setAttribute('tabindex','0');
+      card.setAttribute('aria-label', (caso.title||'Caso') + '. ' + (ESTADOS[caso.status]||{}).label + '. ' + (org.name||''));
+      const abrir = () => abrirFicha(caso.id);
+      card.addEventListener('click', abrir);
+      card.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); abrir(); } });
+    }
+    return card;
+  }
+  function tarjetaSkeleton(){
+    const c = el('div','skeleton');
+    c.appendChild(el('div','sk-linea'));
+    const b = el('div','sk-cuerpo');
+    ['80%','55%','70%'].forEach(w=>{ const s=el('div','sk-barra'); s.style.width=w; b.appendChild(s); });
+    c.appendChild(b); return c;
+  }
+
+  /* ============ 4) VISTAS ============ */
+
+  // ---- MURO (M2) ----
+  let filtros = { disciplina:'', comuna:'', estado:'', texto:'', orden:'recientes' };
+  let muroTimer = null;
+  let muroCargadoUnaVez = false;
+
+  function opcion(v,t){ const o=document.createElement('option'); o.value=v; o.textContent=t; return o; }
+  function comunasDisponibles(){ return [...new Set(estado.cases.filter(c=>PUBLICOS.includes(c.status)).map(c=>c.comuna))].sort(); }
+
+  function poblarFiltros(){
+    const sd = byId('fDisciplina'); sd.textContent=''; sd.appendChild(opcion('','Todas las disciplinas'));
+    DISCIPLINES.forEach(d=> sd.appendChild(opcion(d.id, d.icon+' '+d.name))); sd.value = filtros.disciplina;
+    const sc = byId('fComuna'); sc.textContent=''; sc.appendChild(opcion('','Todas las comunas'));
+    comunasDisponibles().forEach(c=> sc.appendChild(opcion(c,c)));
+    if(![...sc.options].some(o=>o.value===filtros.comuna)) filtros.comuna=''; sc.value = filtros.comuna;
+    const se = byId('fEstado'); se.textContent=''; se.appendChild(opcion('','Todos los estados'));
+    PUBLICOS.forEach(s=> se.appendChild(opcion(s, ESTADOS[s].label))); se.value = filtros.estado;
+    byId('fOrden').value = filtros.orden;
+  }
+  function sincronizarControles(){
+    byId('fDisciplina').value = filtros.disciplina; byId('fComuna').value = filtros.comuna;
+    byId('fEstado').value = filtros.estado; byId('fBuscar').value = filtros.texto; byId('fOrden').value = filtros.orden;
+  }
+  function casosFiltrados(){
+    let arr = estado.cases.filter(c => PUBLICOS.includes(c.status));
+    if(filtros.disciplina) arr = arr.filter(c => c.disciplineId === filtros.disciplina);
+    if(filtros.comuna)     arr = arr.filter(c => c.comuna === filtros.comuna);
+    if(filtros.estado)     arr = arr.filter(c => c.status === filtros.estado);
+    if(filtros.texto){
+      const q = normalizar(filtros.texto);
+      arr = arr.filter(c => {
+        const items = (c.items||[]).map(i=>i.desc).join(' ');
+        const blob = normalizar([c.title, obtenerDisciplina(c.disciplineId).name, obtenerCategoria(c.categoryId).name, obtenerOrg(c.orgId).name, items, c.context, c.comuna].join(' '));
+        return blob.includes(q);
+      });
+    }
+    if(filtros.orden === 'recientes') arr.sort((a,b)=> (b.publishedAt||b.createdAt||'').localeCompare(a.publishedAt||a.createdAt||''));
+    else if(filtros.orden === 'expira') arr.sort((a,b)=> (a.expiresAt||'9999-99-99').localeCompare(b.expiresAt||'9999-99-99'));
+    return arr;
+  }
+  function estadoVacioMuro(){
+    const v = el('div','vacio'); v.style.gridColumn = '1 / -1';
+    v.appendChild(el('div','icono','📭'));
+    v.appendChild(el('h4', null, 'No hay casos con estos filtros'));
+    const p = el('p', null, 'Prueba ampliar la comuna o la disciplina, o limpia los filtros.'); p.style.margin='0 0 12px'; v.appendChild(p);
+    const btn = el('button','btn btn-secundario btn-sm','Limpiar filtros'); btn.type='button';
+    btn.addEventListener('click', limpiarFiltros); v.appendChild(btn);
+    return v;
+  }
+  function renderChipsActivos(){
+    const cont = byId('chipsActivos'); cont.textContent='';
+    const activos = [];
+    if(filtros.disciplina) activos.push(['disciplina', obtenerDisciplina(filtros.disciplina).name]);
+    if(filtros.comuna)     activos.push(['comuna', filtros.comuna]);
+    if(filtros.estado)     activos.push(['estado', (ESTADOS[filtros.estado]||{}).label || filtros.estado]);
+    if(filtros.texto)      activos.push(['texto', '“'+filtros.texto+'”']);
+    activos.forEach(([campo, txt])=>{
+      const chip = el('button','chip-filtro'); chip.type='button';
+      chip.appendChild(document.createTextNode(txt + ' '));
+      chip.appendChild(el('span','x','✕'));
+      chip.setAttribute('aria-label','Quitar filtro ' + txt);
+      chip.addEventListener('click', ()=>{ filtros[campo]=''; sincronizarControles(); renderMuro(false); });
+      cont.appendChild(chip);
+    });
+    cont.style.display = activos.length ? 'flex' : 'none';
+  }
+  function actualizarConteoMuro(n){
+    const co = byId('muroConteo'); co.textContent='';
+    co.appendChild(el('b', null, String(n)));
+    co.appendChild(document.createTextNode(n===1 ? ' caso encontrado' : ' casos encontrados'));
+  }
+  function pintarMuro(cont, arr){
+    cont.textContent='';
+    if(arr.length===0){ cont.appendChild(estadoVacioMuro()); return; }
+    arr.forEach(c => cont.appendChild(crearTarjetaCaso(c)));
+  }
+  function mostrarSkeletons(cont){ cont.textContent=''; for(let k=0;k<6;k++) cont.appendChild(tarjetaSkeleton()); }
+  function renderMuro(conCarga){
+    renderChipsActivos();
+    const cont = byId('muroResultados');
+    const arr = casosFiltrados();
+    actualizarConteoMuro(arr.length);
+    if(conCarga){ mostrarSkeletons(cont); clearTimeout(muroTimer); muroTimer = setTimeout(()=> pintarMuro(cont, arr), 550); }
+    else pintarMuro(cont, arr);
+  }
+  function limpiarFiltros(){
+    filtros = { disciplina:'', comuna:'', estado:'', texto:'', orden:filtros.orden };
+    sincronizarControles(); renderMuro(false);
+  }
+
+  // ---- FICHA (M3) ----
+  let fichaCasoId = null;
+  function panel(titulo){ const p = el('section','panel'); if(titulo) p.appendChild(el('h3', null, titulo)); return p; }
+  function dato(k,v){ const d = el('div','dato'); d.appendChild(el('span','k', k)); d.appendChild(el('span','v', v)); return d; }
+  function encabezadoFicha(titulo, kicker){
+    const h = el('div','encabezado-vista');
+    h.appendChild(el('div','kicker', kicker || 'Módulo 3 · Ficha'));
+    h.appendChild(el('h1', null, titulo));
+    return h;
+  }
+  function fichaPlaceholder(){
+    const cont = el('div');
+    cont.appendChild(encabezadoFicha('Ficha del caso', 'Vista de producto · Módulo 3'));
+    const v = el('div','vacio');
+    v.appendChild(el('div','icono','📄'));
+    v.appendChild(el('h4', null, 'Elige un caso para ver su detalle'));
+    v.appendChild(el('p', null, 'Abre cualquier tarjeta desde el muro para ver aquí su ficha completa.'));
+    const btn = el('button','btn btn-secundario btn-sm','Ir al muro'); btn.type='button'; btn.style.marginTop='10px';
+    btn.addEventListener('click', ()=> irAVista('explorar'));
+    v.appendChild(btn); cont.appendChild(v); return cont;
+  }
+  function renderFicha(){
+    const cont = byId('fichaContenido'); cont.textContent='';
+    const caso = estado.cases.find(c => c.id === fichaCasoId);
+    if(!caso){ cont.appendChild(fichaPlaceholder()); return; }
+    const org = obtenerOrg(caso.orgId);
+    const disc = obtenerDisciplina(caso.disciplineId);
+    const cat = obtenerCategoria(caso.categoryId);
+
+    const volver = el('button','btn-volver'); volver.type='button';
+    volver.appendChild(document.createTextNode('← Volver al muro'));
+    volver.addEventListener('click', ()=> irAVista('explorar'));
+    cont.appendChild(volver);
+
+    const cab = el('div','ficha-cab');
+    cab.appendChild(el('span','disc-chip', disc.icon + ' ' + disc.name));
+    cab.appendChild(el('h1', null, caso.title));
+    const sub = el('div','sub');
+    sub.appendChild(badgeEstado(caso.status));
+    sub.appendChild(document.createTextNode(caso.comuna + ', ' + caso.region));
+    sub.appendChild(el('span','sep','·'));
+    sub.appendChild(document.createTextNode(caso.publishedAt ? ('Publicado el ' + formatearFecha(caso.publishedAt)) : 'Creado el ' + formatearFecha(caso.createdAt)));
+    cab.appendChild(sub);
+    cont.appendChild(cab);
+
+    const grid = el('div','ficha-grid');
+    const main = el('div');
+    const aside = el('div');
+
+    const pNec = panel('Qué se necesita');
+    const ul = el('ul','items');
+    (caso.items||[]).forEach(it=>{ const li=el('li'); li.appendChild(el('span',null,it.desc)); li.appendChild(el('span','q','× '+it.qty)); ul.appendChild(li); });
+    pNec.appendChild(ul);
+    pNec.appendChild(dato('Categoría', cat.name));
+    if(cat.perishable) pNec.appendChild(el('div','nota-perecible','Perecible — requiere coordinación de entrega puntual.'));
+    main.appendChild(pNec);
+
+    const pBen = panel('Para quiénes');
+    pBen.appendChild(dato('Beneficiarios', caso.beneficiariesCount + ' niñas y niños'));
+    pBen.appendChild(dato('Rango de edad', caso.ageRange + ' años'));
+    const prot = el('div','proteccion');
+    prot.appendChild(document.createTextNode('🛡️'));
+    prot.appendChild(el('span', null, 'Por protección de la niñez, no se publican rostros ni nombres de menores. Los beneficiarios se describen de forma agregada.'));
+    pBen.appendChild(prot);
+    main.appendChild(pBen);
+
+    const pCtx = panel('Contexto');
+    const pp = el('p', null, caso.context); pp.style.margin='0'; pCtx.appendChild(pp);
+    main.appendChild(pCtx);
+
+    const pHis = panel('Historial del caso');
+    const tl = el('div','timeline');
+    const eventos = [];
+    if(caso.createdAt) eventos.push({fecha:caso.createdAt, txt:'Caso creado', por:'visibilizador'});
+    (caso.log||[]).forEach(l=> eventos.push({fecha:l.fecha, txt:(ACCION_LABEL[l.accion]||l.accion), por:l.por, nota:l.nota}));
+    eventos.sort((a,b)=> (a.fecha||'').localeCompare(b.fecha||''));
+    if(eventos.length===0) pHis.appendChild(el('p', null, 'Sin movimientos registrados.'));
+    eventos.forEach(ev=>{
+      const item = el('div','tl');
+      item.appendChild(el('div','f', formatearFecha(ev.fecha)));
+      const a = el('div','a'); a.appendChild(el('b', null, ev.txt));
+      if(ev.por) a.appendChild(document.createTextNode(' · ' + ev.por));
+      item.appendChild(a);
+      if(ev.nota) item.appendChild(el('div','f', ev.nota));
+      tl.appendChild(item);
+    });
+    pHis.appendChild(tl); main.appendChild(pHis);
+
+    const pEvi = panel('Evidencia del apoyo');
+    if((caso.evidence||[]).length > 0){
+      caso.evidence.forEach(ev=>{ const box=el('div','evi'); box.appendChild(el('span','ic','✅')); box.appendChild(el('span',null, ev.descripcion || 'Evidencia registrada.')); pEvi.appendChild(box); });
+    } else {
+      const box=el('div','evi'); box.appendChild(el('span','ic','⏳')); box.appendChild(el('span',null,'Aún sin evidencia. Aparecerá aquí cuando el apoyo se concrete.')); pEvi.appendChild(box);
+    }
+    main.appendChild(pEvi);
+
+    const conf = el('div','aside-conf');
+    const pOrg = panel('Organización');
+    const dNom = el('div','dato'); dNom.appendChild(el('span','k','Nombre'));
+    const vNom = el('span','v'); vNom.style.textAlign='right'; vNom.textContent = org.name; dNom.appendChild(vNom); pOrg.appendChild(dNom);
+    pOrg.appendChild(dato('Tipo', org.type));
+    pOrg.appendChild(dato('Comuna', org.comuna));
+    if(org.foundedYear) pOrg.appendChild(dato('Desde', String(org.foundedYear)));
+    const dVer = el('div','dato'); dVer.appendChild(el('span','k','Verificación'));
+    const vVer = el('span','v'); vVer.style.textAlign='right';
+    if(org.verificationStatus==='verificada') vVer.appendChild(chipVerificado('Verificada'));
+    else vVer.appendChild(el('span','chip-noverif', VERIF_LABEL[org.verificationStatus] || 'Por verificar'));
+    dVer.appendChild(vVer); pOrg.appendChild(dVer);
+    conf.appendChild(pOrg);
+
+    const pSen = panel('Señales de legitimidad');
+    const s = caso.legitimacySignals || {};
+    pSen.appendChild(dato('Federado', s.federado ? 'Sí' : 'No'));
+    pSen.appendChild(dato('Antigüedad', (s.antiguedadAnios!=null ? s.antiguedadAnios + ' años' : '—')));
+    pSen.appendChild(dato('Respaldo', s.respaldo ? 'Con respaldo' : 'Sin respaldo aún'));
+    conf.appendChild(pSen);
+
+    const pCta = panel(null);
+    const cta = el('button','btn btn-primario btn-block','Quiero ayudar con esto'); cta.type='button';
+    cta.addEventListener('click', ()=> abrirContacto(caso.id));
+    pCta.appendChild(cta);
+    pCta.appendChild(el('div','nota-mediado','El contacto es mediado: coordinamos el aporte sin exponer teléfonos ni correos directos.'));
+    const _nOfe = contarOfrecimientos(caso.id);
+    if(_nOfe>0){ pCta.appendChild(el('div','chip-ofrece', _nOfe===1 ? '1 persona ya ofreció ayuda' : _nOfe + ' personas ya ofrecieron ayuda')); }
+    conf.appendChild(pCta);
+
+    aside.appendChild(conf);
+    grid.appendChild(main); grid.appendChild(aside); cont.appendChild(grid);
+  }
+  function abrirFicha(id){ fichaCasoId = id; renderFicha(); irAVista('ficha'); }
+
+  // ---- PUBLICAR (M4) ----
+  let pasoActual = 1;
+  let borradorItems = [{desc:'', qty:1}];
+  const TITULOS_PASO = ['Paso 1 de 4 · Qué se necesita','Paso 2 de 4 · Para quiénes y dónde','Paso 3 de 4 · Legitimidad','Paso 4 de 4 · Revisar y enviar'];
+
+  function poblarCatalogosPublicar(){
+    const sd = byId('pDisciplina'); sd.appendChild(opcion('','Selecciona una disciplina…'));
+    DISCIPLINES.forEach(d=> sd.appendChild(opcion(d.id, d.icon+' '+d.name)));
+    const sc = byId('pCategoria'); sc.appendChild(opcion('','Selecciona el tipo…'));
+    CATEGORIES.forEach(c=> sc.appendChild(opcion(c.id, c.name + (c.perishable ? ' (perecible)' : ''))));
+  }
+  function repoblarOrgsPublicar(){
+    const so = byId('pOrg'); const val = so.value; so.textContent='';
+    so.appendChild(opcion('','Selecciona…'));
+    estado.organizations.forEach(o=> so.appendChild(opcion(o.id, o.name)));
+    so.appendChild(opcion('__nueva__','+ Crear nueva organización'));
+    if([...so.options].some(o=>o.value===val)) so.value = val;
+  }
+  function renderItemsPublicar(){
+    const cont = byId('pItems'); cont.textContent='';
+    borradorItems.forEach((it, idx)=>{
+      const row = el('div','item-row');
+      const d = el('input'); d.type='text'; d.placeholder='Ej: Balones de vóleibol talla 5'; d.value=it.desc;
+      d.setAttribute('aria-label','Descripción del ítem '+(idx+1));
+      d.addEventListener('input', e=>{ borradorItems[idx].desc = e.target.value; });
+      const q = el('input'); q.type='number'; q.min='1'; q.value=it.qty; q.style.textAlign='center';
+      q.setAttribute('aria-label','Cantidad del ítem '+(idx+1));
+      q.addEventListener('input', e=>{ borradorItems[idx].qty = e.target.value; });
+      const rm = el('button','btn-quitar','✕'); rm.type='button'; rm.setAttribute('aria-label','Quitar ítem '+(idx+1));
+      rm.addEventListener('click', ()=>{ if(borradorItems.length>1){ borradorItems.splice(idx,1); renderItemsPublicar(); } else aviso('Debe quedar al menos un ítem', true); });
+      row.appendChild(d); row.appendChild(q); row.appendChild(rm);
+      cont.appendChild(row);
+    });
+  }
+  // marca/limpia error en el .fld que contiene al input dado
+  function marcar(idInput, hayError, mensaje){
+    const inp = byId(idInput);
+    const fld = inp ? inp.closest('.fld') : byId(idInput);
+    if(fld){
+      fld.classList.toggle('error', !!hayError);
+      if(mensaje){ const m = fld.querySelector('.msg'); if(m) m.textContent = mensaje; }
+    }
+    return !hayError;
+  }
+  function validarPaso(n){
+    let ok = true;
+    if(n===1){
+      const t = byId('pTitulo').value.trim();
+      const nmT = nombreMenorDetectado(t);
+      if(t.length<6 || t.length>120) ok = marcar('pTitulo', true, 'Escribe un título de 6 a 120 caracteres.') && ok;
+      else if(nmT) ok = marcar('pTitulo', true, 'Quita el nombre “'+nmT+'”: no publicamos nombres de menores.') && ok;
+      else marcar('pTitulo', false);
+      ok = marcar('pDisciplina', !byId('pDisciplina').value) && ok;
+      ok = marcar('pCategoria', !byId('pCategoria').value) && ok;
+      const itemsOk = borradorItems.some(it=> String(it.desc).trim() && Number(it.qty)>0);
+      byId('fldItems').classList.toggle('error', !itemsOk); ok = itemsOk && ok;
+    } else if(n===2){
+      const b = parseInt(byId('pBeneficiarios').value,10);
+      ok = marcar('pBeneficiarios', !(b>0)) && ok;
+      const mn = parseInt(byId('pEdadMin').value,10), mx = parseInt(byId('pEdadMax').value,10);
+      const edadOk = Number.isInteger(mn) && Number.isInteger(mx) && mn>=0 && mx<=18 && mn<=mx;
+      ok = marcar('pEdadMin', !edadOk) && ok;
+      ok = marcar('pComuna', !byId('pComuna').value.trim()) && ok;
+      const ctx = byId('pContexto').value.trim();
+      const nmC = nombreMenorDetectado(ctx);
+      if(ctx.length<20) ok = marcar('pContexto', true, 'Escribe al menos 20 caracteres describiendo la necesidad.') && ok;
+      else if(nmC) ok = marcar('pContexto', true, 'Quita el nombre “'+nmC+'”: describe sin nombrar a menores.') && ok;
+      else marcar('pContexto', false);
+    } else if(n===3){
+      const org = byId('pOrg').value;
+      ok = marcar('pOrg', !org) && ok;
+      if(org==='__nueva__') ok = marcar('pOrgNombre', !byId('pOrgNombre').value.trim()) && ok;
+      ok = marcar('pRol', !byId('pRol').value) && ok;
+      const anioStr = byId('pAnioInicio').value;
+      if(anioStr){ const a = parseInt(anioStr,10); const okA = a>=1900 && a<=new Date().getFullYear(); ok = marcar('pAnioInicio', !okA) && ok; }
+      else marcar('pAnioInicio', false);
+    }
+    return ok;
+  }
+  function resolverOrgBorrador(){
+    const v = byId('pOrg').value;
+    if(v==='__nueva__') return { name: byId('pOrgNombre').value.trim() || 'Nueva organización', verificationStatus:'por_verificar', type: byId('pOrgTipo').value, comuna: byId('pComuna').value.trim() };
+    return obtenerOrg(v);
+  }
+  // Construye el caso desde el formulario (orgId puede ser '__nueva__'; sin persistir).
+  function construirCaso(){
+    const categoryId = byId('pCategoria').value;
+    const cat = obtenerCategoria(categoryId);
+    const items = borradorItems.filter(it=> String(it.desc).trim() && Number(it.qty)>0).map(it=>({desc:String(it.desc).trim(), qty:Number(it.qty)}));
+    const anio = parseInt(byId('pAnioInicio').value,10);
+    const nowY = new Date().getFullYear();
+    const hoy = new Date().toISOString().slice(0,10);
+    return {
+      id:'case_'+Date.now().toString(36),
+      title: byId('pTitulo').value.trim(),
+      disciplineId: byId('pDisciplina').value,
+      categoryId,
+      items,
+      beneficiariesCount: parseInt(byId('pBeneficiarios').value,10) || 0,
+      ageRange: (byId('pEdadMin').value||'?') + '–' + (byId('pEdadMax').value||'?'),
+      comuna: byId('pComuna').value.trim(),
+      region: byId('pRegion').value.trim() || 'Coquimbo',
+      context: byId('pContexto').value.trim(),
+      status:'en_revision',
+      orgId: byId('pOrg').value,
+      authorRole: byId('pRol').value,
+      legitimacySignals:{ federado: byId('pFederado').checked, antiguedadAnios: (anio ? (nowY-anio) : null), respaldo: byId('pRespaldo').checked },
+      perishable: !!cat.perishable,
+      evidence:[], createdAt:hoy, publishedAt:null, expiresAt:null,
+      log:[{fecha:hoy, accion:'crear', por:'visibilizador'}]
+    };
+  }
+  function renderRevision(){
+    const cont = byId('pRevision'); cont.textContent='';
+    const caso = construirCaso();
+    const org = resolverOrgBorrador();
+    cont.appendChild(el('p','paso-titulo','Así se verá tu caso. Revísalo antes de enviarlo a revisión.'));
+    const prev = el('div'); prev.style.maxWidth='320px'; prev.style.margin='0 0 18px';
+    prev.appendChild(crearTarjetaCaso(caso, false, org));
+    cont.appendChild(prev);
+    const p = panel('Resumen');
+    p.appendChild(dato('Disciplina', obtenerDisciplina(caso.disciplineId).name));
+    p.appendChild(dato('Tipo', obtenerCategoria(caso.categoryId).name + (caso.perishable ? ' (perecible)' : '')));
+    const dItems = el('div','dato'); dItems.appendChild(el('span','k','Implementos'));
+    const vItems = el('span','v'); vItems.style.textAlign='right';
+    vItems.textContent = caso.items.map(i=> i.desc + ' ×' + i.qty).join(', ') || '—';
+    dItems.appendChild(vItems); p.appendChild(dItems);
+    p.appendChild(dato('Beneficiarios', caso.beneficiariesCount + ' niñas y niños, ' + caso.ageRange + ' años'));
+    p.appendChild(dato('Ubicación', caso.comuna + ', ' + caso.region));
+    p.appendChild(dato('Organización', org.name));
+    p.appendChild(dato('Tu relación', caso.authorRole || '—'));
+    cont.appendChild(p);
+    cont.appendChild(el('div','nota-envio','Al enviar, tu caso quedará EN REVISIÓN. Será revisado por moderación antes de publicarse en el muro.'));
+  }
+  function renderPaso(){
+    document.querySelectorAll('#pubForm .paso').forEach(p=> p.classList.toggle('activo', Number(p.dataset.paso)===pasoActual));
+    document.querySelectorAll('#pProgreso .seg').forEach((s,i)=> s.classList.toggle('on', i < pasoActual));
+    byId('pPasoTitulo').textContent = TITULOS_PASO[pasoActual-1];
+    byId('pAnterior').style.visibility = pasoActual===1 ? 'hidden' : 'visible';
+    byId('pSiguiente').textContent = pasoActual===4 ? 'Enviar a revisión' : 'Siguiente →';
+    if(pasoActual===4) renderRevision();
+  }
+  function siguientePaso(){
+    if(pasoActual < 4){
+      if(validarPaso(pasoActual)){ pasoActual++; renderPaso(); window.scrollTo({top:0, behavior:'smooth'}); }
+      else aviso('Revisa los campos marcados en rojo', true);
+    } else {
+      enviarCaso();
+    }
+  }
+  function anteriorPaso(){ if(pasoActual>1){ pasoActual--; renderPaso(); window.scrollTo({top:0, behavior:'smooth'}); } }
+  function enviarCaso(){
+    if(!validarPaso(1)){ pasoActual=1; renderPaso(); aviso('Faltan datos en el paso 1', true); return; }
+    if(!validarPaso(2)){ pasoActual=2; renderPaso(); aviso('Faltan datos en el paso 2', true); return; }
+    if(!validarPaso(3)){ pasoActual=3; renderPaso(); aviso('Faltan datos en el paso 3', true); return; }
+    const caso = construirCaso();
+    if(caso.orgId==='__nueva__'){
+      const nid = 'org_' + Date.now().toString(36);
+      const anio = parseInt(byId('pAnioInicio').value,10);
+      estado.organizations.push({ id:nid, name: byId('pOrgNombre').value.trim(), type: byId('pOrgTipo').value, disciplines:[caso.disciplineId], comuna: caso.comuna, region: caso.region, verificationStatus:'por_verificar', foundedYear: anio||null, socialLinks:[] });
+      caso.orgId = nid;
+    }
+    estado.cases.push(caso);
+    poblarFiltros(); renderConteo(); renderMuro(false);
+    mostrarExito(caso);
+  }
+  function mostrarExito(caso){
+    byId('pubForm').style.display='none';
+    const ex = byId('pubExito'); ex.textContent=''; ex.style.display='block';
+    const box = el('div','exito');
+    box.appendChild(el('div','ic','✅'));
+    box.appendChild(el('h2', null, 'Tu caso quedó en revisión'));
+    box.appendChild(el('p', null, 'Publicaste con responsabilidad. Antes de aparecer en el muro, el caso será revisado por moderación para cuidar la confianza de la comunidad.'));
+    const acc = el('div','acc');
+    const b1 = el('button','btn btn-primario','Ver mi caso'); b1.type='button'; b1.addEventListener('click', ()=> abrirFicha(caso.id));
+    const b2 = el('button','btn btn-secundario','Publicar otra'); b2.type='button'; b2.addEventListener('click', resetPublicar);
+    const b3 = el('button','btn btn-fantasma','Ir al muro'); b3.type='button'; b3.addEventListener('click', ()=> irAVista('explorar'));
+    acc.appendChild(b1); acc.appendChild(b2); acc.appendChild(b3);
+    box.appendChild(acc); ex.appendChild(box);
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  function resetPublicar(){
+    byId('pubExito').style.display='none';
+    byId('pubForm').style.display='block';
+    ['pTitulo','pBeneficiarios','pEdadMin','pEdadMax','pComuna','pContexto','pOrgNombre','pAnioInicio'].forEach(id=>{ const e=byId(id); if(e) e.value=''; });
+    byId('pRegion').value='Coquimbo';
+    byId('pDisciplina').value=''; byId('pCategoria').value=''; byId('pRol').value=''; byId('pOrgTipo').value='club';
+    repoblarOrgsPublicar(); byId('pOrg').value='';
+    byId('pFederado').checked=false; byId('pRespaldo').checked=false;
+    byId('pPerecible').classList.remove('ver');
+    byId('pOrgNueva').style.display='none';
+    document.querySelectorAll('#pubForm .fld.error').forEach(f=> f.classList.remove('error'));
+    borradorItems = [{desc:'', qty:1}]; renderItemsPublicar();
+    pasoActual = 1; renderPaso();
+  }
+
+  // ---- MODERAR (M5) ----
+  let moderarCasoId = null;
+  let moderarTab = 'en_revision';
+  const MOD_TABS = [
+    {id:'en_revision', label:'Pendientes'},
+    {id:'en_curso', label:'En curso'},
+    {id:'correcciones', label:'En corrección'},
+    {id:'resuelto', label:'Resueltos'},
+    {id:'rechazado', label:'Rechazados'}
+  ];
+  const EN_CURSO = ['publicado','en_contacto','apoyado_parcial'];
+  function casosDeTab(tab){ return tab==='en_curso' ? estado.cases.filter(c=>EN_CURSO.includes(c.status)) : estado.cases.filter(c=>c.status===tab); }
+  const RUBRICA = [
+    'La necesidad es clara y concreta (qué y cuánto).',
+    'No hay nombres ni rostros de menores.',
+    'La organización muestra señales de legitimidad.',
+    'El contexto justifica la necesidad.',
+    'Las cantidades son razonables para los beneficiarios.'
+  ];
+  function hoyISO(){ return new Date().toISOString().slice(0,10); }
+  function sumarDiasISO(iso, dias){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
+  function contarPorEstado(st){ return estado.cases.filter(c=>c.status===st).length; }
+  function actualizarBadgeModerar(){
+    const b = byId('badgeModerar'); if(!b) return;
+    const n = contarPorEstado('en_revision');
+    b.textContent = n>0 ? String(n) : '';
+    b.style.display = n>0 ? 'inline-flex' : 'none';
+  }
+  function encabezadoModerar(){
+    const h = el('div','encabezado-vista');
+    h.appendChild(el('div','kicker','Módulo 5 · Moderación'));
+    h.appendChild(el('h1', null, 'Moderar necesidades'));
+    h.appendChild(el('p','intro','Antes de publicarse, cada caso pasa por aquí. Revisa, aprueba, pide correcciones o rechaza para cuidar la confianza de la red.'));
+    return h;
+  }
+  function itemCola(caso){
+    const org = obtenerOrg(caso.orgId);
+    const disc = obtenerDisciplina(caso.disciplineId);
+    const it = el('article','mod-item');
+    const top = el('div','mod-item-top');
+    top.appendChild(el('span','disc-chip', disc.icon+' '+disc.name));
+    top.appendChild(badgeEstado(caso.status));
+    it.appendChild(top);
+    it.appendChild(el('h3','mod-item-tit', caso.title));
+    it.appendChild(el('div','mod-item-meta', org.name + ' · ' + caso.comuna + ' · ' + caso.beneficiariesCount + ' niñas y niños · creado ' + formatearFecha(caso.createdAt)));
+    const acc = el('div','mod-item-acc');
+    const rev = el('button','btn btn-secundario btn-sm','Revisar →'); rev.type='button';
+    rev.addEventListener('click', ()=>{ moderarCasoId=caso.id; renderModerar(); window.scrollTo({top:0,behavior:'smooth'}); });
+    acc.appendChild(rev); it.appendChild(acc);
+    return it;
+  }
+  function actualizarRubrica(){
+    const n = document.querySelectorAll('#vista-moderar input[data-rub="1"]:checked').length;
+    const c = byId('rubCount'); if(c) c.textContent = n + ' de ' + RUBRICA.length + ' criterios marcados';
+  }
+  function pedirNota(){
+    const t = byId('modNota');
+    if(t){ const f=t.closest('.fld'); if(f) f.classList.add('error'); t.focus(); }
+    aviso('Escribe una nota o motivo primero', true);
+  }
+  function accionModerar(caso, tipo){
+    const nota = byId('modNota') ? byId('modNota').value.trim() : '';
+    const hoy = hoyISO();
+    caso.log = caso.log || [];
+    if(tipo==='aprobar'){
+      caso.status='publicado'; caso.publishedAt=hoy; caso.expiresAt=sumarDiasISO(hoy,60);
+      caso.log.push({fecha:hoy, accion:'aprobar', por:'moderación', nota: nota||undefined});
+      aviso('Caso aprobado y publicado');
+    } else if(tipo==='correcciones'){
+      if(!nota){ pedirNota(); return; }
+      caso.status='correcciones'; caso.log.push({fecha:hoy, accion:'pedir_correccion', por:'moderación', nota});
+      aviso('Se solicitaron correcciones');
+    } else if(tipo==='rechazar'){
+      if(!nota){ pedirNota(); return; }
+      caso.status='rechazado'; caso.log.push({fecha:hoy, accion:'rechazar', por:'moderación', nota});
+      aviso('Caso rechazado');
+    } else if(tipo==='reabrir'){
+      caso.status='en_revision'; caso.log.push({fecha:hoy, accion:'reabrir', por:'moderación'});
+      aviso('Caso devuelto a revisión');
+    }
+    moderarCasoId = null;
+    poblarFiltros(); renderConteo(); renderMuro(false); renderModerar(); renderReportes();
+  }
+  function renderRevisionModerar(){
+    const wrap = el('div');
+    const caso = estado.cases.find(c=>c.id===moderarCasoId);
+    if(!caso){ moderarCasoId=null; renderModerar(); return wrap; }
+    const org = obtenerOrg(caso.orgId);
+    const disc = obtenerDisciplina(caso.disciplineId);
+    const cat = obtenerCategoria(caso.categoryId);
+
+    const volver = el('button','btn-volver','← Volver a la cola'); volver.type='button';
+    volver.addEventListener('click', ()=>{ moderarCasoId=null; renderModerar(); });
+    wrap.appendChild(volver);
+
+    const cab = el('div','ficha-cab');
+    cab.appendChild(el('span','disc-chip', disc.icon+' '+disc.name));
+    cab.appendChild(el('h1', null, caso.title));
+    const sub = el('div','sub');
+    sub.appendChild(badgeEstado(caso.status));
+    sub.appendChild(document.createTextNode(caso.comuna+', '+caso.region));
+    sub.appendChild(el('span','sep','·'));
+    sub.appendChild(document.createTextNode('Creado el '+formatearFecha(caso.createdAt)));
+    cab.appendChild(sub); wrap.appendChild(cab);
+
+    const grid = el('div','ficha-grid'); const main = el('div'); const aside = el('div');
+
+    const pNec = panel('Qué se necesita');
+    const ul = el('ul','items');
+    (caso.items||[]).forEach(i=>{ const li=el('li'); li.appendChild(el('span',null,i.desc)); li.appendChild(el('span','q','× '+i.qty)); ul.appendChild(li); });
+    pNec.appendChild(ul);
+    pNec.appendChild(dato('Categoría', cat.name + (cat.perishable?' (perecible)':'')));
+    main.appendChild(pNec);
+
+    const pBen = panel('Para quiénes');
+    pBen.appendChild(dato('Beneficiarios', caso.beneficiariesCount+' niñas y niños'));
+    pBen.appendChild(dato('Rango de edad', caso.ageRange+' años'));
+    const prot = el('div','proteccion');
+    prot.appendChild(document.createTextNode('🛡️'));
+    prot.appendChild(el('span',null,'Revisa que el contexto no revele nombres ni rostros de menores.'));
+    pBen.appendChild(prot); main.appendChild(pBen);
+
+    const pCtx = panel('Contexto'); const pp = el('p',null,caso.context); pp.style.margin='0'; pCtx.appendChild(pp); main.appendChild(pCtx);
+
+    const pHis = panel('Historial'); const tl = el('div','timeline');
+    const evs = []; if(caso.createdAt) evs.push({fecha:caso.createdAt, txt:'Caso creado', por:'visibilizador'});
+    (caso.log||[]).forEach(l=> evs.push({fecha:l.fecha, txt:(ACCION_LABEL[l.accion]||l.accion), por:l.por, nota:l.nota}));
+    evs.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    if(evs.length===0) pHis.appendChild(el('p',null,'Sin movimientos.'));
+    evs.forEach(ev=>{ const item=el('div','tl'); item.appendChild(el('div','f',formatearFecha(ev.fecha))); const a=el('div','a'); a.appendChild(el('b',null,ev.txt)); if(ev.por) a.appendChild(document.createTextNode(' · '+ev.por)); item.appendChild(a); if(ev.nota) item.appendChild(el('div','f',ev.nota)); tl.appendChild(item); });
+    pHis.appendChild(tl); main.appendChild(pHis);
+
+    const pOrg = panel('Organización');
+    const dNom = el('div','dato'); dNom.appendChild(el('span','k','Nombre')); const vNom=el('span','v'); vNom.style.textAlign='right'; vNom.textContent=org.name; dNom.appendChild(vNom); pOrg.appendChild(dNom);
+    pOrg.appendChild(dato('Tipo', org.type));
+    pOrg.appendChild(dato('Comuna', org.comuna));
+    const dVer = el('div','dato'); dVer.appendChild(el('span','k','Verificación')); const vVer=el('span','v'); vVer.style.textAlign='right';
+    if(org.verificationStatus==='verificada') vVer.appendChild(chipVerificado('Verificada'));
+    else vVer.appendChild(el('span','chip-noverif', VERIF_LABEL[org.verificationStatus] || 'Por verificar'));
+    dVer.appendChild(vVer); pOrg.appendChild(dVer);
+    if(org.verificationStatus!=='verificada' && org.id){
+      const bv = el('button','btn btn-secundario btn-sm btn-block','Marcar organización como verificada'); bv.type='button'; bv.style.marginTop='10px';
+      bv.addEventListener('click', ()=>{ org.verificationStatus='verificada'; aviso('Organización verificada'); renderMuro(false); renderModerar(); });
+      pOrg.appendChild(bv);
+    }
+    aside.appendChild(pOrg);
+
+    const pSen = panel('Señales de legitimidad'); const sg = caso.legitimacySignals || {};
+    pSen.appendChild(dato('Federado', sg.federado?'Sí':'No'));
+    pSen.appendChild(dato('Antigüedad', sg.antiguedadAnios!=null ? sg.antiguedadAnios+' años' : '—'));
+    pSen.appendChild(dato('Respaldo', sg.respaldo?'Con respaldo':'Sin respaldo aún'));
+    aside.appendChild(pSen);
+    const _ofertas = estado.offers.filter(o=>o.caseId===caso.id);
+    const pOfe = panel('Ofrecimientos recibidos');
+    if(_ofertas.length===0){ pOfe.appendChild(el('p',null,'Aún no hay ofrecimientos.')); }
+    else {
+      _ofertas.forEach(o=>{
+        const box=el('div','ofrecimiento');
+        const top=el('div','ofr-top');
+        top.appendChild(el('span','ofr-tipo', TIPO_OFERTA[o.tipo]||o.tipo));
+        top.appendChild(el('span','ofr-fecha', formatearFecha(o.createdAt)));
+        box.appendChild(top);
+        box.appendChild(el('div','ofr-quien', o.contacto.nombre + ' \u00b7 ' + (o.actorTipo==='organizacion'?'Organización':'Persona')));
+        box.appendChild(el('div','ofr-medio', (o.contacto.medio==='correo'?'Correo: ':'Teléfono: ') + o.contacto.valor));
+        if(o.items && o.items.length) box.appendChild(el('div','ofr-items','Aporta: ' + o.items.map(i=>i.desc+' \u00d7'+i.qty).join(', ')));
+        if(o.mensaje) box.appendChild(el('div','ofr-msg','\u201c'+o.mensaje+'\u201d'));
+        pOfe.appendChild(box);
+      });
+      pOfe.appendChild(el('div','ofr-nota','Datos privados: úsalos solo para coordinar el aporte.'));
+    }
+    aside.appendChild(pOfe);
+
+    const pRub = panel('Rúbrica de revisión');
+    RUBRICA.forEach(txt=>{
+      const lab = el('label','check'); const cb = el('input'); cb.type='checkbox'; cb.dataset.rub='1';
+      cb.addEventListener('change', actualizarRubrica);
+      const tx = el('span','tx'); tx.textContent = txt;
+      lab.appendChild(cb); lab.appendChild(tx); pRub.appendChild(lab);
+    });
+    const rc = el('div','rub-count'); rc.id='rubCount'; rc.textContent = '0 de ' + RUBRICA.length + ' criterios marcados';
+    pRub.appendChild(rc); aside.appendChild(pRub);
+
+    const pDec = panel('Decisión');
+    if(caso.status==='en_revision'){
+      const fl = el('div','fld'); const ta = el('textarea','mod-nota'); ta.id='modNota';
+      ta.placeholder = 'Nota para el autor (obligatoria para “Pedir correcciones” y “Rechazar”).';
+      fl.appendChild(ta); pDec.appendChild(fl);
+      const bA = el('button','btn btn-primario btn-block','Aprobar y publicar'); bA.type='button'; bA.addEventListener('click', ()=>accionModerar(caso,'aprobar'));
+      const bC = el('button','btn btn-secundario btn-block','Pedir correcciones'); bC.type='button'; bC.style.marginTop='8px'; bC.addEventListener('click', ()=>accionModerar(caso,'correcciones'));
+      const bR = el('button','btn btn-peligro btn-block','Rechazar'); bR.type='button'; bR.style.marginTop='8px'; bR.addEventListener('click', ()=>accionModerar(caso,'rechazar'));
+      pDec.appendChild(bA); pDec.appendChild(bC); pDec.appendChild(bR);
+    } else if(caso.status==='correcciones' || caso.status==='rechazado'){
+      const fl = el('div','fld'); const ta = el('textarea','mod-nota'); ta.id='modNota'; ta.placeholder='Nota (opcional).'; fl.appendChild(ta); pDec.appendChild(fl);
+      const bV = el('button','btn btn-secundario btn-block','Volver a revisión'); bV.type='button'; bV.addEventListener('click', ()=>accionModerar(caso,'reabrir'));
+      pDec.appendChild(bV);
+    } else if(EN_CURSO.includes(caso.status)){
+      pDec.appendChild(el('p','cierre-hint','Registra el avance del caso o ciérralo con evidencia del apoyo entregado.'));
+      const fl = el('div','fld'); const ta = el('textarea'); ta.id='modEvidencia'; ta.placeholder='Describe la evidencia del apoyo (sin datos ni rostros de menores). Ej: entrega de 10 poleras el 5 de agosto.'; fl.appendChild(ta); pDec.appendChild(fl);
+      if(caso.status!=='apoyado_parcial'){
+        const bP = el('button','btn btn-secundario btn-block','Registrar apoyo parcial'); bP.type='button'; bP.addEventListener('click', ()=>cerrarCaso(caso,'apoyo_parcial')); pDec.appendChild(bP);
+      }
+      const bRes = el('button','btn btn-primario btn-block','Marcar como resuelto'); bRes.type='button'; bRes.style.marginTop='8px'; bRes.addEventListener('click', ()=>cerrarCaso(caso,'resuelto')); pDec.appendChild(bRes);
+    } else if(caso.status==='resuelto'){
+      pDec.appendChild(el('p','cierre-hint','Caso resuelto. Puedes reabrirlo si el apoyo no se concretó.'));
+      const bReab = el('button','btn btn-fantasma btn-block','Reabrir caso'); bReab.type='button'; bReab.addEventListener('click', ()=>cerrarCaso(caso,'reabrir')); pDec.appendChild(bReab);
+    }
+    aside.appendChild(pDec);
+
+    grid.appendChild(main); grid.appendChild(aside); wrap.appendChild(grid);
+    return wrap;
+  }
+  function renderModerar(){
+    const cont = byId('vista-moderar'); if(!cont) return; cont.textContent='';
+    if(moderarCasoId){ cont.appendChild(renderRevisionModerar()); return; }
+    cont.appendChild(encabezadoModerar());
+    const tabs = el('div','mod-tabs');
+    MOD_TABS.forEach(t=>{
+      const b = el('button','mod-tab' + (moderarTab===t.id?' activo':'')); b.type='button';
+      b.appendChild(document.createTextNode(t.label + ' '));
+      b.appendChild(el('span','mod-tab-num', String(casosDeTab(t.id).length)));
+      b.addEventListener('click', ()=>{ moderarTab=t.id; renderModerar(); });
+      tabs.appendChild(b);
+    });
+    cont.appendChild(tabs);
+    const cola = el('div','cola');
+    const items = casosDeTab(moderarTab).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+    if(items.length===0){
+      const v = el('div','vacio'); v.appendChild(el('div','icono','✅'));
+      v.appendChild(el('h4',null, moderarTab==='en_revision' ? 'No hay casos pendientes' : 'Nada por aquí'));
+      v.appendChild(el('p',null, moderarTab==='en_revision' ? 'Cuando alguien publique una necesidad, aparecerá aquí para revisión.' : 'No hay casos en este estado.'));
+      cola.appendChild(v);
+    } else {
+      items.forEach(c=> cola.appendChild(itemCola(c)));
+    }
+    cont.appendChild(cola);
+  }
+
+  // ---- CONTACTO MEDIADO (M6) ----
+  let contactoCasoId = null;
+  const TIPO_OFERTA = { total:'Cubre todo', parcial:'Aporta una parte', difundir:'Difunde' };
+  function contarOfrecimientos(id){ return estado.offers.filter(o=>o.caseId===id).length; }
+  function abrirContacto(id){
+    contactoCasoId = id; renderFormContacto();
+    const m = byId('modalContacto'); m.hidden=false; document.body.style.overflow='hidden';
+    setTimeout(()=>{ const f=m.querySelector('input,select,textarea,button'); if(f) f.focus(); }, 0);
+  }
+  function cerrarModal(){ const m=byId('modalContacto'); if(!m) return; m.hidden=true; document.body.style.overflow=''; contactoCasoId=null; }
+  function grupoRadio(titulo, name, opciones, def){
+    const g = el('div','radio-grupo'); g.appendChild(el('div','radio-tit', titulo));
+    opciones.forEach(o=>{
+      const lab = el('label','radio-card');
+      const inp = el('input'); inp.type='radio'; inp.name=name; inp.value=o.v; if(o.v===def) inp.checked=true;
+      lab.appendChild(inp); lab.appendChild(el('span','radio-tx', o.t));
+      g.appendChild(lab);
+    });
+    return g;
+  }
+  function actualizarItemsContacto(){
+    const sel = document.querySelector('input[name="ctTipo"]:checked');
+    const v = sel ? sel.value : 'total';
+    const cont = byId('ctItems'); if(cont) cont.style.display = (v==='parcial') ? 'block' : 'none';
+  }
+  function renderFormContacto(){
+    const cont = byId('modalContenido'); cont.textContent='';
+    const caso = estado.cases.find(c=>c.id===contactoCasoId);
+    if(!caso){ cerrarModal(); return; }
+    cont.appendChild(el('div','modal-eyebrow','Contacto mediado'));
+    const h = el('h2', null, 'Quiero ayudar con esto'); h.id='modalTit'; cont.appendChild(h);
+    cont.appendChild(el('p','modal-sub', caso.title));
+
+    cont.appendChild(grupoRadio('¿Cómo puedes ayudar?','ctTipo',[
+      {v:'total', t:'Puedo cubrir todo lo que falta'},
+      {v:'parcial', t:'Puedo aportar una parte'},
+      {v:'difundir', t:'Quiero ayudar a difundir'}
+    ],'total'));
+
+    const wrapItems = el('div','ct-items'); wrapItems.id='ctItems'; wrapItems.style.display='none';
+    (caso.items||[]).forEach((it,idx)=>{
+      const row = el('div','ct-item-row');
+      row.appendChild(el('span','ct-item-desc', it.desc + ' (faltan ' + it.qty + ')'));
+      const inp = el('input'); inp.type='number'; inp.min='0'; inp.max=String(it.qty); inp.value='0'; inp.className='ct-qty'; inp.dataset.idx=String(idx);
+      inp.setAttribute('aria-label','Cuántos puedes aportar de ' + it.desc);
+      row.appendChild(inp); wrapItems.appendChild(row);
+    });
+    cont.appendChild(wrapItems);
+
+    const flMsg = el('div','fld'); const lm = el('label', null, 'Mensaje para la organización (opcional)'); lm.setAttribute('for','ctMsg'); flMsg.appendChild(lm);
+    const ta = el('textarea'); ta.id='ctMsg'; ta.placeholder='Ej: Puedo entregar esta semana en Tongoy.'; flMsg.appendChild(ta);
+    flMsg.appendChild(el('div','hint','No compartas datos de menores. El equipo de Relevo coordina el contacto.'));
+    cont.appendChild(flMsg);
+
+    cont.appendChild(el('div','ct-priv-tit','Tus datos de contacto'));
+    const flNom = el('div','fld'); const ln = el('label', null, 'Tu nombre'); ln.setAttribute('for','ctNombre'); flNom.appendChild(ln);
+    const inNom = el('input'); inNom.type='text'; inNom.id='ctNombre'; inNom.placeholder='Nombre y apellido'; flNom.appendChild(inNom);
+    flNom.appendChild(el('div','msg','Escribe tu nombre.')); cont.appendChild(flNom);
+
+    const fl2 = el('div','fld-2');
+    const flMedio = el('div','fld'); const lme = el('label', null, 'Medio'); lme.setAttribute('for','ctMedio'); flMedio.appendChild(lme);
+    const selMedio = el('select'); selMedio.id='ctMedio';
+    [['correo','Correo'],['telefono','Teléfono']].forEach(pair=>{ const o=document.createElement('option'); o.value=pair[0]; o.textContent=pair[1]; selMedio.appendChild(o); });
+    flMedio.appendChild(selMedio);
+    const flValor = el('div','fld'); const lv = el('label', null, '¿Dónde te contactamos?'); lv.setAttribute('for','ctValor'); flValor.appendChild(lv);
+    const inVal = el('input'); inVal.type='text'; inVal.id='ctValor'; inVal.placeholder='correo@ejemplo.cl'; flValor.appendChild(inVal);
+    flValor.appendChild(el('div','msg','Ingresa un dato de contacto válido.'));
+    fl2.appendChild(flMedio); fl2.appendChild(flValor); cont.appendChild(fl2);
+
+    cont.appendChild(el('div','priv-nota','🔒 Privado: solo el equipo de Relevo verá esto para conectarte. No se publica en el caso.'));
+
+    cont.appendChild(grupoRadio('Actúas como','ctActor',[{v:'persona',t:'Persona'},{v:'organizacion',t:'Organización'}],'persona'));
+
+    const acc = el('div','modal-acc');
+    const bEnv = el('button','btn btn-primario btn-block','Enviar ofrecimiento'); bEnv.type='button'; bEnv.addEventListener('click', enviarOfrecimiento);
+    const bCan = el('button','btn btn-fantasma btn-block','Cancelar'); bCan.type='button'; bCan.style.marginTop='8px'; bCan.addEventListener('click', cerrarModal);
+    acc.appendChild(bEnv); acc.appendChild(bCan); cont.appendChild(acc);
+
+    cont.querySelectorAll('input[name="ctTipo"]').forEach(r=> r.addEventListener('change', actualizarItemsContacto));
+    byId('ctMedio').addEventListener('change', e=>{ byId('ctValor').placeholder = e.target.value==='telefono' ? '+56 9 5555 5555' : 'correo@ejemplo.cl'; });
+  }
+  function enviarOfrecimiento(){
+    const caso = estado.cases.find(c=>c.id===contactoCasoId); if(!caso) return;
+    const selT = document.querySelector('input[name="ctTipo"]:checked');
+    const tipo = selT ? selT.value : 'total';
+    const nombre = byId('ctNombre').value.trim();
+    const medio = byId('ctMedio').value;
+    const valor = byId('ctValor').value.trim();
+    let ok = true;
+    if(!nombre){ marcar('ctNombre', true); ok=false; } else marcar('ctNombre', false);
+    const valorOk = medio==='correo' ? /.+@.+\..+/.test(valor) : valor.replace(/\D/g,'').length>=8;
+    if(!valorOk){ marcar('ctValor', true); ok=false; } else marcar('ctValor', false);
+    let items = [];
+    if(tipo==='parcial'){
+      document.querySelectorAll('#ctItems .ct-qty').forEach(inp=>{ const q=Number(inp.value); if(q>0){ const idx=Number(inp.dataset.idx); items.push({desc:caso.items[idx].desc, qty:q}); } });
+      if(items.length===0){ aviso('Indica al menos un ítem que puedas aportar', true); ok=false; }
+    }
+    if(!ok) return;
+    const selA = document.querySelector('input[name="ctActor"]:checked');
+    const actor = selA ? selA.value : 'persona';
+    const hoy = hoyISO();
+    estado.offers.push({ id:'off_'+Date.now().toString(36), caseId:caso.id, tipo, items, mensaje: byId('ctMsg').value.trim(), contacto:{nombre, medio, valor}, actorTipo:actor, createdAt:hoy });
+    caso.log = caso.log || []; caso.log.push({fecha:hoy, accion:'contacto', por:'colaborador'});
+    if(caso.status==='publicado') caso.status='en_contacto';
+    renderFicha(); renderMuro(false); renderModerar(); renderConteo();
+    renderExitoContacto(caso);
+  }
+  function renderExitoContacto(caso){
+    const cont = byId('modalContenido'); cont.textContent='';
+    const box = el('div','modal-exito');
+    box.appendChild(el('div','ic','🤝'));
+    box.appendChild(el('h2', null, '¡Gracias! Recibimos tu ofrecimiento'));
+    box.appendChild(el('p', null, 'El equipo de Relevo coordinará el contacto con la organización. Tu información no se muestra en el caso.'));
+    const acc = el('div','modal-acc');
+    const bVer = el('button','btn btn-primario btn-block','Ver el caso'); bVer.type='button'; bVer.addEventListener('click', ()=>{ cerrarModal(); abrirFicha(caso.id); });
+    const bCer = el('button','btn btn-fantasma btn-block','Cerrar'); bCer.type='button'; bCer.style.marginTop='8px'; bCer.addEventListener('click', cerrarModal);
+    acc.appendChild(bVer); acc.appendChild(bCer); box.appendChild(acc);
+    cont.appendChild(box);
+  }
+
+  // ---- CIERRE + EVIDENCIA (M7) ----
+  function cerrarCaso(caso, tipo){
+    const ev = byId('modEvidencia') ? byId('modEvidencia').value.trim() : '';
+    const hoy = hoyISO(); caso.log = caso.log || []; caso.evidence = caso.evidence || [];
+    if(tipo==='apoyo_parcial'){
+      caso.status='apoyado_parcial';
+      if(ev) caso.evidence.push({tipo:'avance', descripcion:ev, fecha:hoy});
+      caso.log.push({fecha:hoy, accion:'apoyo_parcial', por:'moderación', nota: ev||undefined});
+      aviso('Apoyo parcial registrado');
+    } else if(tipo==='resuelto'){
+      if(!ev){ const f=byId('modEvidencia').closest('.fld'); if(f) f.classList.add('error'); byId('modEvidencia').focus(); aviso('Agrega la evidencia del cierre', true); return; }
+      caso.status='resuelto'; caso.evidence.push({tipo:'evidencia_cierre', descripcion:ev, fecha:hoy});
+      caso.log.push({fecha:hoy, accion:'resuelto', por:'moderación'});
+      aviso('Caso marcado como resuelto');
+    } else if(tipo==='reabrir'){
+      caso.status='en_contacto'; caso.log.push({fecha:hoy, accion:'reabrir', por:'moderación'});
+      aviso('Caso reabierto');
+    }
+    moderarCasoId=null; poblarFiltros(); renderConteo(); renderMuro(false); renderModerar(); renderReportes();
+  }
+
+  // ---- REPORTES (M7) ----
+  function mesDeCaso(c){
+    const rl = (c.log||[]).filter(l=>l.accion==='resuelto').map(l=>l.fecha).sort().pop();
+    const f = rl || c.publishedAt || c.createdAt || '';
+    return String(f).slice(0,7);
+  }
+  function etiquetaMes(ym){ const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; const p=String(ym).split('-'); return (meses[parseInt(p[1],10)-1]||'?')+' '+String(p[0]).slice(2); }
+  function resueltosPorMes(){ const m={}; estado.cases.filter(c=>c.status==='resuelto').forEach(c=>{ const k=mesDeCaso(c); if(k) m[k]=(m[k]||0)+1; }); return Object.keys(m).sort().map(k=>({label:etiquetaMes(k), valor:m[k]})); }
+  function porEstadoRep(){ const orden=['en_revision','publicado','en_contacto','apoyado_parcial','resuelto','correcciones','rechazado']; return orden.map(st=>({label:(ESTADOS[st]||{}).label||st, valor:estado.cases.filter(c=>c.status===st).length})).filter(x=>x.valor>0); }
+  function porDisciplinaRep(){ return DISCIPLINES.map(d=>({label:d.icon+' '+d.name, valor:estado.cases.filter(c=>c.disciplineId===d.id).length})).filter(x=>x.valor>0).sort((a,b)=>b.valor-a.valor); }
+  function porComunaRep(){ const m={}; estado.cases.forEach(c=>{ m[c.comuna]=(m[c.comuna]||0)+1; }); return Object.keys(m).map(k=>({label:k,valor:m[k]})).sort((a,b)=>b.valor-a.valor); }
+  function bloqueBarras(titulo, datos, resaltar){
+    const pb = el('section','panel'); pb.appendChild(el('h3',null,titulo));
+    if(!datos.length){ pb.appendChild(el('p',null,'Sin datos aún.')); return pb; }
+    const max = Math.max.apply(null, datos.map(d=>d.valor)) || 1;
+    datos.forEach(d=>{
+      const row = el('div','barra-row');
+      row.appendChild(el('span','barra-lab', d.label));
+      const track = el('div','barra-track'); const fill = el('div','barra-fill'+(resaltar?' resalta':''));
+      fill.style.width = Math.round(d.valor/max*100)+'%'; track.appendChild(fill); row.appendChild(track);
+      row.appendChild(el('span','barra-val', String(d.valor)));
+      pb.appendChild(row);
+    });
+    return pb;
+  }
+  function renderReportes(){
+    const cont = byId('vista-reportes'); if(!cont) return; cont.textContent='';
+    const h = el('div','encabezado-vista');
+    h.appendChild(el('div','kicker','Módulo 7 · Reportes'));
+    h.appendChild(el('h1', null, 'Reportes e impacto'));
+    h.appendChild(el('p','intro','El pulso de la red: cuántas necesidades se resuelven con evidencia y cómo se distribuyen.'));
+    cont.appendChild(h);
+    const cases = estado.cases;
+    const total = cases.length;
+    const publicos = cases.filter(c=>PUBLICOS.includes(c.status)).length;
+    const resueltos = cases.filter(c=>c.status==='resuelto').length;
+    const resueltosEvid = cases.filter(c=>c.status==='resuelto' && (c.evidence||[]).length>0).length;
+    const pctEvid = resueltos ? Math.round(resueltosEvid/resueltos*100) : 0;
+    const orgsVerif = estado.organizations.filter(o=>o.verificationStatus==='verificada').length;
+    const ofertas = estado.offers.length;
+    const ns = el('div','ns-card');
+    ns.appendChild(el('div','ns-num', String(resueltosEvid)));
+    ns.appendChild(el('div','ns-lab','casos resueltos con evidencia'));
+    ns.appendChild(el('div','ns-sub', pctEvid + '% de los casos resueltos tienen evidencia registrada'));
+    cont.appendChild(ns);
+    const tiles = el('div','rep-tiles');
+    [['Casos totales', total],['Públicos', publicos],['Resueltos', resueltos],['Ofrecimientos', ofertas],['Orgs. verificadas', orgsVerif]].forEach(par=>{
+      const t = el('div','rep-tile'); t.appendChild(el('div','rt-num', String(par[1]))); t.appendChild(el('div','rt-lab', par[0])); tiles.appendChild(t);
+    });
+    cont.appendChild(tiles);
+    cont.appendChild(bloqueBarras('Casos resueltos por mes', resueltosPorMes(), true));
+    cont.appendChild(bloqueBarras('Casos por estado', porEstadoRep()));
+    cont.appendChild(bloqueBarras('Casos por disciplina', porDisciplinaRep()));
+    cont.appendChild(bloqueBarras('Casos por comuna', porComunaRep()));
+  }
+
+  // ---- CONEXIÓN CON LA API (M8) ----
+  let apiBase = null;
+  function actualizarEstadoConexion(){ const e=byId('conEstado'); if(!e) return; if(apiBase){ e.textContent='● Conectado'; e.className='con-estado on'; } else { e.textContent=''; e.className='con-estado'; } }
+  function abrirConectar(){ renderConectar(); const m=byId('modalContacto'); m.hidden=false; document.body.style.overflow='hidden'; setTimeout(()=>{ const i=byId('apiUrl'); if(i) i.focus(); },0); }
+  function renderConectar(){
+    const cont = byId('modalContenido'); cont.textContent='';
+    cont.appendChild(el('div','modal-eyebrow','Módulo 8 · Backend'));
+    const h = el('h2', null, 'Conectar con la API'); h.id='modalTit'; cont.appendChild(h);
+    cont.appendChild(el('p','modal-sub','Carga los datos desde un servidor Relevo en marcha, para trabajar con datos compartidos.'));
+    const fl = el('div','fld'); const l = el('label', null, 'Dirección de la API'); l.setAttribute('for','apiUrl'); fl.appendChild(l);
+    const inp = el('input'); inp.type='text'; inp.id='apiUrl'; inp.placeholder='http://localhost:3000'; inp.value = apiBase || 'http://localhost:3000'; fl.appendChild(inp);
+    fl.appendChild(el('div','hint','Debe ser un backend Relevo (ver la carpeta relevo-backend). Se cargan organizaciones, casos y ofrecimientos.'));
+    cont.appendChild(fl);
+    cont.appendChild(el('div','priv-nota','Esta vista carga datos (lectura). La escritura (publicar, moderar) va por la API REST del backend; ver el README.'));
+    const acc = el('div','modal-acc');
+    const b = el('button','btn btn-primario btn-block','Conectar'); b.type='button'; b.addEventListener('click', conectarAPI); acc.appendChild(b);
+    if(apiBase){ const bd = el('button','btn btn-fantasma btn-block','Volver a datos de ejemplo'); bd.type='button'; bd.style.marginTop='8px'; bd.addEventListener('click', desconectarAPI); acc.appendChild(bd); }
+    const bc = el('button','btn btn-fantasma btn-block','Cancelar'); bc.type='button'; bc.style.marginTop='8px'; bc.addEventListener('click', cerrarModal); acc.appendChild(bc);
+    cont.appendChild(acc);
+  }
+  function conectarAPI(){
+    const base = (byId('apiUrl').value||'').trim().replace(/\/+$/,'');
+    if(!base){ aviso('Ingresa la dirección de la API', true); return; }
+    aviso('Conectando…');
+    fetch(base + '/bootstrap').then(r=>{ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(d=>{
+      if(!d || !Array.isArray(d.cases)) throw new Error('Respuesta inválida');
+      estado.organizations = d.organizations || []; estado.cases = d.cases || []; estado.offers = d.offers || [];
+      apiBase = base; fichaCasoId=null; moderarCasoId=null; contactoCasoId=null;
+      cerrarModal(); refrescarTodo(true); actualizarEstadoConexion();
+      aviso('Conectado a ' + base + ' (' + estado.cases.length + ' casos)');
+    }).catch(err=>{ aviso('No se pudo conectar: ' + err.message, true); });
+  }
+  function desconectarAPI(){ apiBase=null; cargarSemilla(); fichaCasoId=null; moderarCasoId=null; cerrarModal(); refrescarTodo(true); actualizarEstadoConexion(); aviso('Volviste a los datos de ejemplo'); }
+
+  // ---- Sistema de diseño ----
+  function renderSistema(){
+    const marca = [['Esmeralda','--pino'],['Ámbar','--maravilla'],['Cielo','--azul'],['Fondo','--papel'],['Superficie','--superficie'],['Texto','--tinta']];
+    const cs = getComputedStyle(document.documentElement);
+    const cont = byId('swMarca'); cont.textContent='';
+    marca.forEach(([n,varName])=>{
+      const h = cs.getPropertyValue(varName).trim() || varName;
+      const sw=el('div','sw'); const c=el('div','c'); c.style.background=h; c.style.border='1px solid var(--linea)';
+      const t=el('div','t'); t.appendChild(el('div','n', n)); t.appendChild(el('div','h', h));
+      sw.appendChild(c); sw.appendChild(t); cont.appendChild(sw);
+    });
+    const be = byId('badgesEstado'); be.textContent='';
+    ['en_revision','publicado','en_contacto','apoyado_parcial','resuelto','correcciones','rechazado'].forEach(s=> be.appendChild(badgeEstado(s)));
+    const demo = byId('demoTarjeta'); demo.textContent=''; demo.appendChild(crearTarjetaCaso(estado.cases[0]));
+  }
+  function renderConteo(){
+    const total = estado.cases.length;
+    const publicados = estado.cases.filter(c=>PUBLICOS.includes(c.status)).length;
+    const orgs = estado.organizations.length;
+    const co = byId('conteo'); co.textContent='';
+    co.appendChild(el('b', null, String(total))); co.appendChild(document.createTextNode(' casos · '));
+    co.appendChild(el('b', null, String(orgs)));  co.appendChild(document.createTextNode(' organizaciones · '));
+    co.appendChild(el('b', null, String(publicados))); co.appendChild(document.createTextNode(' públicos'));
+    actualizarBadgeModerar();
+  }
+
+  // Router
+  function irAVista(nombre){
+    document.querySelectorAll('.vista').forEach(v => v.classList.remove('visible'));
+    const destino = byId('vista-'+nombre);
+    if(destino) destino.classList.add('visible');
+    document.querySelectorAll('nav.principal button').forEach(b=> b.setAttribute('aria-current', b.dataset.vista===nombre ? 'page' : 'false'));
+    if(nombre==='ficha') renderFicha();
+    if(nombre==='moderar') renderModerar();
+    if(nombre==='reportes') renderReportes();
+    if(nombre==='explorar' && !muroCargadoUnaVez){ muroCargadoUnaVez = true; renderMuro(true); }
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  /* ============ 5) PERSISTENCIA — JSON (sin localStorage) ============ */
+  function exportarJSON(){
+    const datos = { app:'Relevo', version:6, exportadoEn:new Date().toISOString(), organizations: estado.organizations, cases: estado.cases, offers: estado.offers };
+    const blob = new Blob([JSON.stringify(datos, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'relevo-datos.json';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    aviso('Datos exportados como relevo-datos.json');
+  }
+  function importarJSON(file){
+    const reader = new FileReader();
+    reader.onload = e => {
+      try{
+        const datos = JSON.parse(e.target.result);
+        if(!datos || !Array.isArray(datos.cases)) throw new Error('El archivo no tiene una lista de casos válida');
+        estado.cases = datos.cases;
+        if(Array.isArray(datos.organizations)) estado.organizations = datos.organizations;
+        estado.offers = Array.isArray(datos.offers) ? datos.offers : [];
+        if(fichaCasoId && !estado.cases.some(c=>c.id===fichaCasoId)) fichaCasoId = null;
+        refrescarTodo(true);
+        aviso('Datos importados correctamente (' + estado.cases.length + ' casos)');
+      }catch(err){ aviso('No se pudo importar: ' + err.message, true); }
+    };
+    reader.onerror = ()=> aviso('Error al leer el archivo', true);
+    reader.readAsText(file);
+  }
+
+  /* ============ AVISO + INIT ============ */
+  let avisoTimer;
+  function aviso(msg, esError){
+    const a = byId('aviso');
+    a.textContent = msg; a.classList.toggle('error', !!esError); a.classList.add('ver');
+    clearTimeout(avisoTimer); avisoTimer = setTimeout(()=> a.classList.remove('ver'), 3200);
+  }
+  function refrescarTodo(conCarga){
+    renderSistema(); poblarFiltros(); repoblarOrgsPublicar(); renderConteo(); renderFicha(); renderModerar(); renderReportes(); renderMuro(!!conCarga);
+  }
+  function init(){
+    cargarSemilla();
+    renderSistema(); poblarFiltros(); renderConteo();
+    muroCargadoUnaVez = true; renderMuro(true);
+
+    // publicar
+    poblarCatalogosPublicar(); repoblarOrgsPublicar(); renderItemsPublicar(); renderPaso();
+
+    // navegación
+    document.querySelectorAll('nav.principal button').forEach(b=> b.addEventListener('click', ()=> irAVista(b.dataset.vista)));
+
+    // apariencia clara / oscura
+    const _html = document.documentElement;
+    function aplicarTema(t){ if(t==='oscuro'){ _html.setAttribute('data-tema','oscuro'); byId('btnTema').textContent='☀️'; } else { _html.removeAttribute('data-tema'); byId('btnTema').textContent='🌙'; } renderSistema(); }
+    let temaOscuro = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    aplicarTema(temaOscuro ? 'oscuro' : 'claro');
+    byId('btnTema').addEventListener('click', ()=>{ temaOscuro = !temaOscuro; aplicarTema(temaOscuro ? 'oscuro' : 'claro'); aviso(temaOscuro ? 'Apariencia oscura' : 'Apariencia clara'); });
+
+    // filtros
+    byId('fDisciplina').addEventListener('change', e=>{ filtros.disciplina = e.target.value; renderMuro(false); });
+    byId('fComuna').addEventListener('change', e=>{ filtros.comuna = e.target.value; renderMuro(false); });
+    byId('fEstado').addEventListener('change', e=>{ filtros.estado = e.target.value; renderMuro(false); });
+    byId('fOrden').addEventListener('change', e=>{ filtros.orden = e.target.value; renderMuro(false); });
+    let tBuscar;
+    byId('fBuscar').addEventListener('input', e=>{ clearTimeout(tBuscar); const val=e.target.value; tBuscar=setTimeout(()=>{ filtros.texto=val.trim(); renderMuro(false); }, 160); });
+    byId('btnLimpiar').addEventListener('click', limpiarFiltros);
+
+    // publicar: eventos
+    byId('pCategoria').addEventListener('change', e=>{ byId('pPerecible').classList.toggle('ver', obtenerCategoria(e.target.value).perishable); });
+    byId('pOrg').addEventListener('change', e=>{ byId('pOrgNueva').style.display = (e.target.value==='__nueva__') ? 'block' : 'none'; });
+    byId('pAgregarItem').addEventListener('click', ()=>{ borradorItems.push({desc:'', qty:1}); renderItemsPublicar(); });
+    byId('pAnterior').addEventListener('click', anteriorPaso);
+    byId('pSiguiente').addEventListener('click', siguientePaso);
+
+    // persistencia
+    byId('btnExportar').addEventListener('click', exportarJSON);
+    byId('btnImportar').addEventListener('click', ()=> byId('inputImportar').click());
+    byId('inputImportar').addEventListener('change', e=>{ if(e.target.files && e.target.files[0]) importarJSON(e.target.files[0]); e.target.value=''; });
+    byId('modalCerrar').addEventListener('click', cerrarModal);
+    byId('btnConectar').addEventListener('click', abrirConectar);
+    actualizarEstadoConexion();
+    byId('modalContacto').addEventListener('click', e=>{ if(e.target===byId('modalContacto')) cerrarModal(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && byId('modalContacto') && !byId('modalContacto').hidden) cerrarModal(); });
+    byId('btnReset').addEventListener('click', ()=>{ cargarSemilla(); filtros={disciplina:'',comuna:'',estado:'',texto:'',orden:'recientes'}; fichaCasoId=null; moderarCasoId=null; moderarTab='en_revision'; resetPublicar(); refrescarTodo(true); aviso('Datos de ejemplo restaurados'); });
+  }
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

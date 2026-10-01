@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relevo · Presentación</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Public+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+:root{
+  --pino:#0F5D4C;--pino-700:#0B4A3C;--pino-100:#DCEAE3;--maravilla:#EE8B2B;--maravilla-600:#CE7418;
+  --azul:#2E7DB5;--azul-100:#DEECF6;--violeta:#6A5AC9;--tinta:#12211C;--papel:#F2F5F2;
+  --musgo:#566259;--musgo-2:#7C8A81;--linea:#E1E7E1;--superficie:#FFFFFF;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#0a1512;color:var(--tinta);font-family:'Public Sans',system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+/* escenario 16:9 */
+#escenario{position:relative;width:min(96vw,calc(94vh*16/9));height:min(94vh,calc(96vw*9/16));
+  background:var(--papel);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.7)}
+
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+  padding:2.6em 3em;animation:ap .35s ease}
+.slide.activa{display:flex}
+@keyframes ap{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.slide{animation:none}}
+
+h1,h2,h3{font-family:'Archivo';letter-spacing:-.02em;line-height:1.04;margin:0}
+.eyebrow{font-family:'Space Mono';font-size:.62em;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--maravilla-600);margin-bottom:.9em;display:flex;align-items:center;gap:.7em}
+.eyebrow::before{content:"";width:2.4em;height:2px;background:var(--maravilla)}
+.slide h2{font-size:2.5em;font-weight:800}
+.slide p{font-size:1em;line-height:1.5;color:var(--musgo);margin:.7em 0 0;max-width:26em}
+.slide.oscura{background:linear-gradient(135deg,var(--pino),var(--pino-700));color:#fff}
+.slide.oscura .eyebrow{color:#FBD9A9}.slide.oscura .eyebrow::before{background:var(--maravilla)}
+.slide.oscura p{color:#CFE1D9}
+
+.marca{position:absolute;top:1.6em;left:3em;display:flex;align-items:center;gap:.5em;font-family:'Archivo';font-weight:800;font-size:.8em;color:var(--pino)}
+.slide.oscura .marca{color:#fff}
+.marca .glifo{width:1.5em;height:1.5em}
+.numslide{position:absolute;top:1.6em;right:3em;font-family:'Space Mono';font-size:.62em;color:var(--musgo-2)}
+.slide.oscura .numslide{color:#9FBEB2}
+
+/* portada */
+.cover h1{font-size:5.2em;font-weight:800;line-height:.92}
+.cover .tag{font-size:1.15em;color:#DCEAE3;margin-top:.6em;max-width:20em}
+.cover .lema{font-family:'Space Mono';font-size:.75em;letter-spacing:.16em;text-transform:uppercase;color:var(--maravilla);margin-top:2.2em}
+
+/* listas de puntos */
+.puntos{display:flex;flex-direction:column;gap:.7em;margin-top:1.2em}
+.punto{display:flex;gap:.7em;align-items:flex-start;font-size:1.05em}
+.punto .b{width:1.7em;height:1.7em;flex:none;border-radius:8px;background:var(--pino);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:.7em}
+.slide.oscura .punto .b{background:var(--maravilla);color:#3a2405}
+.punto b{color:var(--tinta)}.slide.oscura .punto b{color:#fff}
+.punto span.d{color:var(--musgo)}.slide.oscura .punto span.d{color:#CFE1D9}
+
+/* pilares / grid */
+.pilares{display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;margin-top:1.4em}
+.pilar{background:var(--superficie);border:1px solid var(--linea);border-radius:12px;padding:1em}
+.pilar .t{font-family:'Archivo';font-weight:800;font-size:1.1em;color:var(--pino-700)}
+.pilar .d{font-size:.78em;color:var(--musgo);margin-top:.3em;line-height:1.4}
+
+.roles{display:grid;grid-template-columns:repeat(2,1fr);gap:.8em;margin-top:1.2em}
+.rol{background:var(--superficie);border:1px solid var(--linea);border-radius:12px;padding:.9em 1em}
+.rol .r{font-family:'Space Mono';font-size:.6em;letter-spacing:.06em;text-transform:uppercase;color:var(--maravilla-600)}
+.rol .n{font-family:'Archivo';font-weight:700;font-size:1em;margin:.2em 0}
+.rol .d{font-size:.78em;color:var(--musgo);line-height:1.4}
+
+.discs{display:flex;flex-wrap:wrap;gap:.6em;margin-top:1.2em}
+.disc{background:var(--superficie);border:1px solid var(--linea);border-radius:999px;padding:.5em .9em;font-size:.85em;display:flex;gap:.4em;align-items:center}
+.destacar{margin-top:1.3em;background:var(--maravilla);color:#3a2405;border-radius:12px;padding:.8em 1.1em;font-size:.92em;font-weight:600;max-width:30em}
+
+.estado{display:flex;flex-direction:column;gap:.55em;margin-top:1.2em}
+.est{display:flex;align-items:center;gap:.7em;font-size:1.02em}
+.est .ck{width:1.5em;height:1.5em;border-radius:50%;background:var(--pino);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8em;flex:none}
+.est.next .ck{background:var(--maravilla);color:#3a2405}
+
+.norte{margin-top:1.2em;font-family:'Archivo';font-weight:800;font-size:2.1em;color:#fff;line-height:1.1;max-width:16em}
+
+.cta{display:grid;grid-template-columns:repeat(2,1fr);gap:.7em;margin-top:1.2em}
+.cta .c{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:.75em 1em}
+.cta .c b{font-family:'Archivo';font-size:1em}
+.cta .c span{display:block;font-size:.78em;color:#CFE1D9;margin-top:.2em}
+
+.road{display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;margin-top:1.4em}
+.fase{background:var(--superficie);border:1px solid var(--linea);border-radius:12px;padding:1em;border-top:4px solid var(--pino)}
+.fase:nth-child(2){border-top-color:var(--maravilla)}.fase:nth-child(3){border-top-color:var(--azul)}
+.fase .ff{font-family:'Space Mono';font-size:.62em;letter-spacing:.06em;text-transform:uppercase;color:var(--musgo-2)}
+.fase .fn{font-family:'Archivo';font-weight:800;font-size:1.05em;margin:.2em 0}
+.fase .fd{font-size:.78em;color:var(--musgo);line-height:1.4}
+
+.cierre h1{font-size:4.4em;font-weight:800}
+.cierre .lema{font-family:'Space Mono';letter-spacing:.16em;text-transform:uppercase;color:var(--maravilla);font-size:.8em;margin-top:1em}
+.cierre .cont{margin-top:1.6em;font-size:.9em;color:#CFE1D9}
+.cierre .cont b{color:#fff}
+
+/* controles */
+#barra{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:10}
+#barra button{width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:18px;cursor:pointer;backdrop-filter:blur(6px)}
+#barra button:hover{background:rgba(255,255,255,.28)}
+#dots{display:flex;gap:7px}
+#dots .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);cursor:pointer;border:0;padding:0}
+#dots .dot.on{background:var(--maravilla);transform:scale(1.3)}
+#contador{position:fixed;bottom:20px;right:18px;color:rgba(255,255,255,.6);font-family:'Space Mono';font-size:12px;z-index:10}
+.ayuda-teclas{position:fixed;bottom:20px;left:18px;color:rgba(255,255,255,.5);font-family:'Space Mono';font-size:11px;z-index:10}
+
+@media print{
+  body{display:block;overflow:visible;background:#fff}
+  #escenario{width:100%;height:auto;box-shadow:none;border-radius:0}
+  .slide{position:relative;display:flex!important;height:100vh;page-break-after:always;inset:auto}
+  #barra,#contador,.ayuda-teclas{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="escenario">
+
+  <!-- 1 PORTADA -->
+  <section class="slide oscura cover activa">
+    <div class="marca"><svg class="glifo" viewBox="0 0 32 32" fill="none"><rect x="1" y="1" width="30" height="30" rx="8" fill="#F2F5F2"/><line x1="16" y1="4" x2="16" y2="28" stroke="#0F5D4C" stroke-width="1.4" opacity=".5"/><circle cx="16" cy="16" r="6" fill="none" stroke="#EE8B2B" stroke-width="2"/><circle cx="16" cy="16" r="1.8" fill="#0F5D4C"/></svg> Relevo</div>
+    <div class="eyebrow">Red Deporte Solidario</div>
+    <h1>Relevo</h1>
+    <p class="tag">Para que ningún niño o niña deje de practicar deporte por falta de implementos.</p>
+    <div class="lema">Toma el relevo.</div>
+  </section>
+
+  <!-- 2 PROBLEMA -->
+  <section class="slide">
+    <div class="eyebrow">Por qué existe</div>
+    <h2>El problema</h2>
+    <div class="puntos">
+      <div class="punto"><span class="b">1</span><div><b>Faltan implementos.</b> <span class="d">Zapatillas, balones, uniformes, protección, hidratación… lo básico para entrenar y competir con dignidad.</span></div></div>
+      <div class="punto"><span class="b">2</span><div><b>Las necesidades son invisibles.</b> <span class="d">Viven dispersas en grupos de mensajería, sin orden ni trazabilidad.</span></div></div>
+      <div class="punto"><span class="b">3</span><div><b>No hay un canal confiable.</b> <span class="d">Quien quiere ayudar no sabe si el caso es real ni cómo aportar.</span></div></div>
+    </div>
+    <div class="destacar">No falta gente dispuesta a ayudar. Falta cómo encontrarse con confianza.</div>
+  </section>
+
+  <!-- 3 SOLUCIÓN -->
+  <section class="slide">
+    <div class="eyebrow">La idea</div>
+    <h2>Relevo es el puente</h2>
+    <p>Un lugar donde una necesidad deportiva real se publica de forma clara y verificable, y donde quien quiere aportar la encuentra y se conecta directamente.</p>
+    <div class="pilares">
+      <div class="pilar"><div class="t">Directo</div><div class="d">La necesidad se conecta con quien ayuda, sin intermediarios que compliquen.</div></div>
+      <div class="pilar"><div class="t">Digno</div><div class="d">Sin lástima ni exposición de menores. Se muestra con respeto.</div></div>
+      <div class="pilar"><div class="t">Trazable</div><div class="d">Cada caso tiene estado, verificación y evidencia del apoyo.</div></div>
+    </div>
+  </section>
+
+  <!-- 4 CÓMO FUNCIONA -->
+  <section class="slide">
+    <div class="eyebrow">En 3 pasos</div>
+    <h2>Cómo funciona</h2>
+    <div class="puntos">
+      <div class="punto"><span class="b">1</span><div><b>Publicar.</b> <span class="d">Un club o escuela describe qué necesita, para cuántos niños y en qué comuna.</span></div></div>
+      <div class="punto"><span class="b">2</span><div><b>Verificar.</b> <span class="d">El equipo revisa y aprueba el caso antes de hacerlo público.</span></div></div>
+      <div class="punto"><span class="b">3</span><div><b>Conectar y cerrar.</b> <span class="d">Quien aporta contacta; al concretarse, el caso se cierra con evidencia.</span></div></div>
+    </div>
+  </section>
+
+  <!-- 5 CONFIANZA -->
+  <section class="slide">
+    <div class="eyebrow">La clave</div>
+    <h2>Por qué se puede confiar</h2>
+    <div class="roles">
+      <div class="rol"><div class="n">✓ Organización verificada</div><div class="d">La unidad de confianza es el club o escuela, no una persona suelta.</div></div>
+      <div class="rol"><div class="n">✓ Moderación previa</div><div class="d">Cada caso se revisa antes de publicarse.</div></div>
+      <div class="rol"><div class="n">✓ Estados visibles</div><div class="d">En revisión, publicado, en contacto, apoyado, resuelto.</div></div>
+      <div class="rol"><div class="n">✓ Evidencia del apoyo</div><div class="d">El cierre se respalda con una prueba real.</div></div>
+    </div>
+    <div class="destacar">Sin rostros ni nombres de menores. Los beneficiarios se describen en agregado.</div>
+  </section>
+
+  <!-- 6 TRANSVERSAL -->
+  <section class="slide">
+    <div class="eyebrow">Alcance</div>
+    <h2>Cualquier disciplina</h2>
+    <div class="discs">
+      <span class="disc">⚽ Fútbol</span><span class="disc">🏀 Básquetbol</span><span class="disc">🏐 Vóleibol</span>
+      <span class="disc">🏃 Atletismo</span><span class="disc">🏊 Natación</span><span class="disc">🚴 Ciclismo</span>
+      <span class="disc">🏓 Tenis de mesa</span><span class="disc">🥋 Artes marciales</span><span class="disc">🤸 Gimnasia</span>
+    </div>
+    <div class="destacar">Desde zapatillas y balones hasta <b>colaciones deportivas</b>: agua, hidratación y colación saludable para entrenar o competir.</div>
+  </section>
+
+  <!-- 7 QUIÉNES PARTICIPAN -->
+  <section class="slide">
+    <div class="eyebrow">Comunidad</div>
+    <h2>Quiénes participan</h2>
+    <div class="roles">
+      <div class="rol"><div class="r">Visibiliza</div><div class="n">Clubes, escuelas y academias</div><div class="d">Publican necesidades reales de sus niños y niñas.</div></div>
+      <div class="rol"><div class="r">Aporta</div><div class="n">Colaboradores</div><div class="d">Personas, exdeportistas, fundaciones y empresas.</div></div>
+      <div class="rol"><div class="r">Cuida</div><div class="n">Moderación</div><div class="d">Protege la confianza de toda la comunidad.</div></div>
+      <div class="rol"><div class="r">Respalda</div><div class="n">Embajadores territoriales</div><div class="d">Verifican casos en terreno, en su comuna.</div></div>
+    </div>
+  </section>
+
+  <!-- 8 DÓNDE ESTAMOS -->
+  <section class="slide">
+    <div class="eyebrow">Estado real</div>
+    <h2>No es una idea en servilleta</h2>
+    <div class="estado">
+      <div class="est"><span class="ck">✓</span> Especificación completa de producto y arquitectura</div>
+      <div class="est"><span class="ck">✓</span> Plan de construcción por módulos</div>
+      <div class="est"><span class="ck">✓</span> Módulo 1 (prototipo funcionando): diseño, datos y navegación</div>
+      <div class="est next"><span class="ck">→</span> Próximo: el muro de necesidades</div>
+    </div>
+    <p>Ya hay base construida y verificada. Sumarse ahora es entrar en el momento en que el proyecto toma forma.</p>
+  </section>
+
+  <!-- 9 NORTE -->
+  <section class="slide oscura">
+    <div class="eyebrow">Nuestro norte</div>
+    <h2>Medimos apoyo real</h2>
+    <div class="norte">Casos resueltos con evidencia.</div>
+    <p>No contamos “likes” ni seguidores. Contamos niñas y niños que hoy pueden jugar gracias a un aporte concretado y verificado.</p>
+  </section>
+
+  <!-- 10 CÓMO PARTICIPAR -->
+  <section class="slide oscura">
+    <div class="eyebrow">Tu lugar en esto</div>
+    <h2>Cómo puedes participar</h2>
+    <div class="cta">
+      <div class="c"><b>Aporta</b><span>Implementos, indumentaria o colaciones deportivas.</span></div>
+      <div class="c"><b>Verifica</b><span>Sé embajador de tu comuna y respalda casos.</span></div>
+      <div class="c"><b>Difunde</b><span>Conecta a un club que necesita apoyo.</span></div>
+      <div class="c"><b>Construye</b><span>Aporta al desarrollo del producto.</span></div>
+      <div class="c"><b>Auspicia</b><span>Empresas y marcas que quieran sumar.</span></div>
+      <div class="c"><b>Coordina</b><span>Apoya la moderación y la operación.</span></div>
+    </div>
+  </section>
+
+  <!-- 11 ROADMAP -->
+  <section class="slide">
+    <div class="eyebrow">Hacia dónde vamos</div>
+    <h2>El camino</h2>
+    <div class="road">
+      <div class="fase"><div class="ff">Ahora</div><div class="fn">MVP · Coquimbo</div><div class="fd">Probar que un caso publicado consigue apoyo real y verificable.</div></div>
+      <div class="fase"><div class="ff">Después</div><div class="fn">Confianza a escala</div><div class="fd">Reputación, panel y notificaciones; menos carga manual.</div></div>
+      <div class="fase"><div class="ff">Luego</div><div class="fn">Regional + alianzas</div><div class="fd">Embajadores, logística y marcas deportivas aliadas.</div></div>
+    </div>
+  </section>
+
+  <!-- 12 CIERRE -->
+  <section class="slide oscura cierre">
+    <div class="marca"><svg class="glifo" viewBox="0 0 32 32" fill="none"><rect x="1" y="1" width="30" height="30" rx="8" fill="#F2F5F2"/><line x1="16" y1="4" x2="16" y2="28" stroke="#0F5D4C" stroke-width="1.4" opacity=".5"/><circle cx="16" cy="16" r="6" fill="none" stroke="#EE8B2B" stroke-width="2"/><circle cx="16" cy="16" r="1.8" fill="#0F5D4C"/></svg> Relevo</div>
+    <h1>Toma el relevo.</h1>
+    <p style="font-size:1.15em;color:#DCEAE3">Una red de apoyo comunitario para el deporte formativo y amateur.</p>
+    <div class="cont">Contacto: <b>[tu correo / comuna]</b> · Coquimbo, Chile</div>
+  </section>
+
+</div>
+
+<!-- controles -->
+<div id="barra">
+  <button id="prev" aria-label="Anterior">‹</button>
+  <div id="dots"></div>
+  <button id="next" aria-label="Siguiente">›</button>
+</div>
+<div id="contador">1 / 12</div>
+<div class="ayuda-teclas">← → para navegar · F pantalla completa</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let i = 0;
+  const dots = document.getElementById('dots');
+  const contador = document.getElementById('contador');
+
+  // crear dots
+  slides.forEach((_,k)=>{
+    const b=document.createElement('button');
+    b.className='dot'+(k===0?' on':'');
+    b.setAttribute('aria-label','Ir a la lámina '+(k+1));
+    b.addEventListener('click',()=>ir(k));
+    dots.appendChild(b);
+  });
+
+  function ir(n){
+    i = Math.max(0, Math.min(total-1, n));
+    slides.forEach((s,k)=>s.classList.toggle('activa', k===i));
+    Array.from(dots.children).forEach((d,k)=>d.classList.toggle('on', k===i));
+    contador.textContent = (i+1)+' / '+total;
+  }
+  function sig(){ ir(i+1); }
+  function ant(){ ir(i-1); }
+
+  document.getElementById('next').addEventListener('click', sig);
+  document.getElementById('prev').addEventListener('click', ant);
+
+  document.addEventListener('keydown', e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); sig(); }
+    else if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); ant(); }
+    else if(e.key==='Home'){ ir(0); }
+    else if(e.key==='End'){ ir(total-1); }
+    else if(e.key==='f'||e.key==='F'){
+      if(!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      else document.exitFullscreen && document.exitFullscreen();
+    }
+  });
+
+  // gesto táctil básico
+  let x0=null;
+  const esc=document.getElementById('escenario');
+  esc.addEventListener('touchstart',e=>{ x0=e.touches[0].clientX; },{passive:true});
+  esc.addEventListener('touchend',e=>{
+    if(x0===null) return;
+    const dx=e.changedTouches[0].clientX - x0;
+    if(Math.abs(dx)>50){ dx<0 ? sig() : ant(); }
+    x0=null;
+  },{passive:true});
+
+  ir(0);
+})();
+</script>
+</body>
+</html>
